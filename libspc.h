@@ -1,4 +1,4 @@
-/* $Id: libspc.h,v 1.1 2005/05/31 16:23:17 raph Exp $ */
+/* $Id: libspc.h,v 1.1.1.1 2005/05/31 16:23:17 raph Exp $ */
 
 /*
  * SPC library
