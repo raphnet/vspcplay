@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.1 2005/05/31 16:23:17 raph Exp $ */
+/* $Id: main.c,v 1.2 2005/05/31 16:38:36 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -54,8 +54,6 @@ static int last_pc=0;
 #define PORTTOOL_X		540
 #define PORTTOOL_Y		500
 
-#define UPDATE_IN_CALLBACK
-
 SPC_Config spc_config = {
     44100,
     16,
@@ -68,7 +66,14 @@ static unsigned char used[65536];
 static unsigned char used2[256];
 
 extern struct SAPU APU;
-struct SIAPU IAPU;
+extern struct SIAPU IAPU;
+
+static int g_cfg_nosound = 0;
+static int g_cfg_novideo = 0;
+static int g_cfg_update_in_callback = 0;
+static int g_cfg_num_files = 0;
+static char **g_cfg_playlist = NULL;
+
 
 SDL_Surface *screen=NULL;
 SDL_Surface *memsurface=NULL;
@@ -173,51 +178,50 @@ void fade_arrays()
 void my_audio_callback(void *userdata, Uint8 *stream, int len)
 {
 //	printf("Callback %d  audio_buf_bytes: %d\n", len, audio_buf_bytes);
-#ifdef UPDATE_IN_CALLBACK
-	while (len>audio_buf_bytes)
+	if (g_cfg_update_in_callback)
 	{
-		SPC_update(&audiobuf[audio_buf_bytes]);
-//		printf("."); fflush(stdout);
-		audio_buf_bytes+=spc_buf_size;
+		while (len>audio_buf_bytes)
+		{
+			SPC_update(&audiobuf[audio_buf_bytes]);
+	//		printf("."); fflush(stdout);
+			audio_buf_bytes+=spc_buf_size;
+		}
+		memcpy(stream, audiobuf, len);
+		memmove(audiobuf, &audiobuf[len], audio_buf_bytes - len);
+		audio_buf_bytes -= len;
+	//		printf("."); fflush(stdout);
 	}
-	memcpy(stream, audiobuf, len);
-	memmove(audiobuf, &audiobuf[len], audio_buf_bytes - len);
-	audio_buf_bytes -= len;
-//		printf("."); fflush(stdout);
-#else
-	SDL_LockAudio();
+	else
+	{
+		SDL_LockAudio();
 
-	if (audio_buf_bytes<len) {
-		printf("Underrun\n");
-		memset(stream, 0, len);
+		if (audio_buf_bytes<len) {
+			printf("Underrun\n");
+			memset(stream, 0, len);
+			SDL_UnlockAudio();
+			return;
+		}
+
+		memcpy(stream, audiobuf, len);
+		memmove(audiobuf, &audiobuf[len], audio_buf_bytes - len);
+		audio_buf_bytes -= len;
+		
+	//	for (i=0; i<100; i++) {
+	//		printf("%02X ", stream[i]);
+	//	}
+	//	printf("\n");
 		SDL_UnlockAudio();
-		return;
 	}
-
-	memcpy(stream, audiobuf, len);
-	memmove(audiobuf, &audiobuf[len], audio_buf_bytes - len);
-	audio_buf_bytes -= len;
-	
-//	for (i=0; i<100; i++) {
-//		printf("%02X ", stream[i]);
-//	}
-//	printf("\n");
-	SDL_UnlockAudio();
-#endif
 }
-
-static int g_cfg_nosound = 0;
-static int g_cfg_novideo = 1;
-static int g_cfg_num_files = 0;
-static char **g_cfg_playlist = NULL;
 
 int parse_args(int argc, char **argv)
 {
 	int res;
 	static struct option long_options[] = {
-		{"nosound", 1, 0, 0},
-		{"novideo", 1, 0, 1},
-		{"help", 1, 0, 'h'},
+		{"nosound", 0, 0, 0},
+		{"novideo", 0, 0, 1},
+		{"update_in_callback", 0, 0, 2},
+		{"help", 0, 0, 'h'},
 		{0,0,0,0}
 	};
 
@@ -239,6 +243,8 @@ int parse_args(int argc, char **argv)
 				printf(" -h, --help     Print help\n");
 				printf(" --nosound      Dont output sound\n");
 				printf(" --novideo      Dont open video window\n");
+				printf(" --update_in_callback   Update spc sound buffer inside\n");
+				printf("                        sdl audio callback\n");
 				exit(0);
 				break;
 		}
@@ -250,10 +256,58 @@ int parse_args(int argc, char **argv)
 	return 0;
 }
 
+int init_sdl()
+{
+	SDL_AudioSpec desired;
+	Uint32 flags=0;
+	
+	/* SDL initialisation */
+	if (!g_cfg_novideo) { flags |= SDL_INIT_VIDEO; }
+	if (!g_cfg_nosound) { flags |= SDL_INIT_AUDIO; }
+
+	SDL_Init(flags);	
+
+	if (!g_cfg_novideo) {
+		// video
+		screen = SDL_SetVideoMode(800, 600, 0, SDL_SWSURFACE);
+		if (screen == NULL) {
+			printf("Failed to set video mode\n");
+			return 0;
+		}
+
+		// precompute some colors
+		color_screen_black = SDL_MapRGB(screen->format, 0x00, 0x00, 0x00);
+		color_screen_white = SDL_MapRGB(screen->format, 0xff, 0xff, 0xff);
+		color_screen_yellow = SDL_MapRGB(screen->format, 0xff, 0xff, 0x00);
+		color_screen_cyan = SDL_MapRGB(screen->format, 0x00, 0xff, 0xff);
+		color_screen_magenta = SDL_MapRGB(screen->format, 0xff, 0x00, 0xff);
+		color_screen_gray = SDL_MapRGB(screen->format, 0x7f, 0x7f, 0x7f);
+	}
+	
+	if (!g_cfg_nosound) {
+		// audio
+		desired.freq = 44100;
+		desired.format = AUDIO_S16SYS;
+		desired.channels = 2;
+		desired.samples = 1024;
+		//desired.samples = 4096;
+		desired.callback = my_audio_callback;
+		desired.userdata = NULL;
+		if ( SDL_OpenAudio(&desired, NULL) < 0 ){
+			fprintf(stderr, "Couldn't open audio: %s\n", SDL_GetError());
+			return -1;
+		}
+
+		printf("sdl audio frag size: %d\n", desired.samples *4);
+	}
+	    
+	return 0;	
+}
+
 int main(int argc, char **argv)
 {
     int num_options;
-    void *buf;
+    void *buf=NULL;
 	int dsp_fd=-1;
 	int tmp, i;
 	int res, updates;
@@ -261,146 +315,122 @@ int main(int argc, char **argv)
 	int loops=0;
 	int cur_mouse_address=-1;
 	SDL_Rect tmprect;
-	SDL_AudioSpec desired;
 	SDL_Rect memrect;
 	char tmpbuf[30];
 
 	memset(used, 0, 65536);
 
-	if (argc<2) { return 0; }
-
 	parse_args(argc, argv);
+
+	if (g_cfg_num_files < 1) {
+		printf("No files specified\n");
+		return 1;
+	}
 	
     spc_buf_size = SPC_init(&spc_config);
 	printf("spc buffer size: %d\n", spc_buf_size);
+	buf = malloc(spc_buf_size*2);
+
 	
+	init_sdl();
 
-	/* SDL initialisation */
-	SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO);	
-
-	// video
-	screen = SDL_SetVideoMode(800, 600, 0, SDL_SWSURFACE);
-	if (screen == NULL) {
-		printf("Failed to set video mode\n");
-		return 0;
-	}
-
-	// audio
-	desired.freq = 44100;
-	desired.format = AUDIO_S16SYS;
-	desired.channels = 2;
-	desired.samples = 1024;
-	//desired.samples = 4096;
-	desired.callback = my_audio_callback;
-	desired.userdata = NULL;
-	if ( SDL_OpenAudio(&desired, NULL) < 0 ){
-		fprintf(stderr, "Couldn't open audio: %s\n", SDL_GetError());
-		goto clean;
-	}
-    buf = malloc(spc_buf_size*2);
-
-	printf("sdl audio frag size: %d\n", desired.samples *4);
-	
-	color_screen_black = SDL_MapRGB(screen->format, 0x00, 0x00, 0x00);
-	color_screen_white = SDL_MapRGB(screen->format, 0xff, 0xff, 0xff);
-	color_screen_yellow = SDL_MapRGB(screen->format, 0xff, 0xff, 0x00);
-	color_screen_cyan = SDL_MapRGB(screen->format, 0x00, 0xff, 0xff);
-	color_screen_magenta = SDL_MapRGB(screen->format, 0xff, 0x00, 0xff);
-	color_screen_gray = SDL_MapRGB(screen->format, 0x7f, 0x7f, 0x7f);
-		
-	
 	memsurface_data = malloc(512*512*4);
 	memset(memsurface_data, 0, 512*512*4);
 
-
+	if (!g_cfg_novideo)
+	{
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
-	memsurface = SDL_CreateRGBSurfaceFrom(memsurface_data,512,512,32,2048,0xFF000000,0x00FF0000,0x0000FF00,0x0);
+		memsurface = SDL_CreateRGBSurfaceFrom(memsurface_data,512,512,32,2048,0xFF000000,0x00FF0000,0x0000FF00,0x0);
 #else
-	memsurface = SDL_CreateRGBSurfaceFrom(memsurface_data,512,512,32,2048,0xFF,0xFF00,0xFF0000,0x0);
+		memsurface = SDL_CreateRGBSurfaceFrom(memsurface_data,512,512,32,2048,0xFF,0xFF00,0xFF0000,0x0);		
 #endif
 	
-	printf("Begin.\n");
-	
-	tmprect.x = MEMORY_VIEW_X-1;
-	tmprect.y = MEMORY_VIEW_Y-1;
-	tmprect.w = 512+2;
-	tmprect.h = 512+2;
-	SDL_FillRect(screen, &tmprect, color_screen_white);	
-	
-	sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y-10, "spc memory:", color_screen_white);
+		tmprect.x = MEMORY_VIEW_X-1;
+		tmprect.y = MEMORY_VIEW_Y-1;
+		tmprect.w = 512+2;
+		tmprect.h = 512+2;
+		SDL_FillRect(screen, &tmprect, color_screen_white);	
+		
+		sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y-10, "spc memory:", color_screen_white);
 
+	}
 	
-    SPC_load(argv[num_options]);
+    SPC_load(g_cfg_playlist[0]);
 	
 	SDL_PauseAudio(0);
     for (;;) 
-	{
+	{		
 		SDL_Event ev;
-		while (SDL_PollEvent(&ev))
-		{
-			switch (ev.type)
-			{
-				case SDL_QUIT:
-					SDL_PauseAudio(1);
-					goto clean;
-					break;
-				case SDL_MOUSEMOTION:
-					{
-						if (	ev.motion.x >= MEMORY_VIEW_X && 
-								ev.motion.x < MEMORY_VIEW_X + 512 &&
-								ev.motion.y >= MEMORY_VIEW_Y &&
-								ev.motion.y < MEMORY_VIEW_Y + 512)
-						{
-							int x, y;
-							x = ev.motion.x - MEMORY_VIEW_X;
-							y = ev.motion.y - MEMORY_VIEW_Y;
-							x /= 2;
-							y /= 2;
-							cur_mouse_address = y*256+x;
-//							printf("%d,%d: $%04X\n", x, y, y*256+x);
-						}
-						else
-						{
-							cur_mouse_address = -1;
-						}
-
-						if (	(ev.motion.x >= PORTTOOL_X + (8*5)) &&
-								ev.motion.y >= PORTTOOL_Y)
-						{
-							int x, y;
-							x = ev.motion.x - (PORTTOOL_X + (8*5));
-							x /= 8;
-							y = ev.motion.y - PORTTOOL_Y;
-							y /= 8;
-							if (y==1) 
-							printf("%d\n", x);
-						}
-					}
-					break;
-			}
-		}
 		
-#ifndef UPDATE_IN_CALLBACK
-		// fill the buffer when possible
-		updates = 0;
-	
-		if (BUFFER_SIZE - audio_buf_bytes >= spc_buf_size )
+		if (!g_cfg_novideo)
 		{
-			if (SDL_MUSTLOCK(memsurface)) {
-				SDL_LockSurface(memsurface);
-			}
-			while (BUFFER_SIZE - audio_buf_bytes >= spc_buf_size) {
-				SDL_LockAudio();
-				SPC_update(&audiobuf[audio_buf_bytes]);
-				SDL_UnlockAudio();
+			while (SDL_PollEvent(&ev))
+			{
+				switch (ev.type)
+				{
+					case SDL_QUIT:
+						SDL_PauseAudio(1);
+						goto clean;
+						break;
+					case SDL_MOUSEMOTION:
+						{
+							if (	ev.motion.x >= MEMORY_VIEW_X && 
+									ev.motion.x < MEMORY_VIEW_X + 512 &&
+									ev.motion.y >= MEMORY_VIEW_Y &&
+									ev.motion.y < MEMORY_VIEW_Y + 512)
+							{
+								int x, y;
+								x = ev.motion.x - MEMORY_VIEW_X;
+								y = ev.motion.y - MEMORY_VIEW_Y;
+								x /= 2;
+								y /= 2;
+								cur_mouse_address = y*256+x;
+	//							printf("%d,%d: $%04X\n", x, y, y*256+x);
+							}
+							else
+							{
+								cur_mouse_address = -1;
+							}
 
-				audio_buf_bytes += spc_buf_size;
-			}
-			if (SDL_MUSTLOCK(memsurface)) {
-				SDL_UnlockSurface(memsurface);
+							if (	(ev.motion.x >= PORTTOOL_X + (8*5)) &&
+									ev.motion.y >= PORTTOOL_Y)
+							{
+								int x, y;
+								x = ev.motion.x - (PORTTOOL_X + (8*5));
+								x /= 8;
+								y = ev.motion.y - PORTTOOL_Y;
+								y /= 8;
+								if (y==1) 
+								printf("%d\n", x);
+							}
+						}
+						break;
+				}
+			} // while (pollevent)
+		} // !g_cfg_novideo
+	
+		if (!g_cfg_update_in_callback)
+		{
+			// fill the buffer when possible
+			updates = 0;
+		
+			if (BUFFER_SIZE - audio_buf_bytes >= spc_buf_size )
+			{
+				if (SDL_MUSTLOCK(memsurface)) {
+					SDL_LockSurface(memsurface);
+				}
+				while (BUFFER_SIZE - audio_buf_bytes >= spc_buf_size) {
+					SDL_LockAudio();
+					SPC_update(&audiobuf[audio_buf_bytes]);
+					SDL_UnlockAudio();
+
+					audio_buf_bytes += spc_buf_size;
+				}
+				if (SDL_MUSTLOCK(memsurface)) {
+					SDL_UnlockSurface(memsurface);
+				}
 			}
 		}
-#endif	
 		
 		fade_arrays();			
 		memrect.x = MEMORY_VIEW_X; memrect.y = MEMORY_VIEW_Y;
@@ -453,18 +483,6 @@ int main(int argc, char **argv)
 		sprintf(tmpbuf, "PC: $%04x", last_pc);
 		sdlfont_drawString(screen, MEMORY_VIEW_X+8*12, MEMORY_VIEW_Y-10, tmpbuf, color_screen_white);
 
-		// dump the 128 dsp registers
-/*		{
-//	int i;
-			for (i=0; i<128; i+=8)
-			{
-				sprintf(tmpbuf, "%02X %02X %02X %02X %02X %02X %02X %02X", 
-						APU.DSP[i], APU.DSP[i+1], APU.DSP[i+2], APU.DSP[i+3], 
-						APU.DSP[i+4], APU.DSP[i+5], APU.DSP[i+6], APU.DSP[i+7]);
-				sdlfont_drawString(screen, MEMORY_VIEW_X+520, MEMORY_VIEW_Y+i, tmpbuf, color_screen_white);
-			}
-		}
-*/
 		tmp = i+10; // y 
 		
 		sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp, "Voices pitchs:", color_screen_white);
@@ -582,37 +600,6 @@ int main(int argc, char **argv)
 		sdlfont_drawString(screen, PORTTOOL_X + (8*5), PORTTOOL_Y+16, tmpbuf, color_screen_white);
 
 		
-		// print voice information
-#if HIDDEN
-		for (i=0; i<8; i++)
-		{
-			sprintf(tmpbuf, "%X: Vol L/R: %02X/%02X Pitch: %04X", i, APU.DSP[0+(i*0x10)], APU.DSP[1+(i*0x10)],
-					APU.DSP[2+(i*0x10)] | (APU.DSP[3+(i*0x10)]<<8)  );
-			sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp, tmpbuf, color_screen_white);
-			tmp += 8;
-			sprintf(tmpbuf, "   Adsr: %02X %02X Gain: %02X Flt: %02X",
-								APU.DSP[5+(i*0x10)], APU.DSP[6+(i*0x10)],
-								APU.DSP[7+(i*0x10)], APU.DSP[0xf+(i*0x10)]);
-			sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp, tmpbuf, color_screen_white);
-			tmp += 12;
-		}
-
-		// test. print some samples addresses
-		for (i=0; i<16; i++)
-		{
-			unsigned short addr;
-			int entry_addr;
-			entry_addr = APU.DSP[0x5d] << 8;
-			entry_addr |= APU.DSP[0x04 + (i*0x10)]<<2;
-			sprintf(tmpbuf, "St: %02X%02X  Lp:%02X%02X", 
-					IAPU.RAM[entry_addr+1],
-					IAPU.RAM[entry_addr],
-					IAPU.RAM[entry_addr+3],
-					IAPU.RAM[entry_addr+2]);
-			sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp, tmpbuf, color_screen_white);
-			tmp += 8;
-		}
-#endif	
 		SDL_UpdateRect(screen, 0, 0, 0, 0);
 
 	}
