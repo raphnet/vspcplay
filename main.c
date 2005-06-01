@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.4 2005/06/01 16:34:39 raph Exp $ */
+/* $Id: main.c,v 1.5 2005/06/01 16:44:24 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -52,7 +52,7 @@ static int last_pc=0;
 #define MEMORY_VIEW_X	16
 #define MEMORY_VIEW_Y	40
 #define PORTTOOL_X		540
-#define PORTTOOL_Y		500
+#define PORTTOOL_Y		380
 
 SPC_Config spc_config = {
     44100,
@@ -313,7 +313,7 @@ int main(int argc, char **argv)
 	int res, updates;
 	int blocksize;
 	int loops=0;
-	int cur_mouse_address=-1;
+	int cur_mouse_address=0x0000;
 	SDL_Rect tmprect;
 	SDL_Rect memrect;
 	char tmpbuf[30];
@@ -389,7 +389,7 @@ int main(int argc, char **argv)
 							}
 							else
 							{
-								cur_mouse_address = -1;
+								//cur_mouse_address = -1;
 							}
 
 						
@@ -588,7 +588,7 @@ int main(int argc, char **argv)
 			}
 			tmp += 8*10 + 8;
 
-			sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp, "Mouseover Hexdump:", color_screen_white);
+			sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp, "  - Mouseover Hexdump -", color_screen_white);
 			tmp+=9;
 			if (cur_mouse_address>=0)
 			{
