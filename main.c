@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.2 2005/05/31 16:38:36 raph Exp $ */
+/* $Id: main.c,v 1.3 2005/06/01 16:24:33 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -408,199 +408,215 @@ int main(int argc, char **argv)
 				}
 			} // while (pollevent)
 		} // !g_cfg_novideo
+
+		if (g_cfg_nosound) {
+			SPC_update(&audiobuf[audio_buf_bytes]);			
+		}
+		else
+		{	
+			
+			if (!g_cfg_update_in_callback)
+			{
+				// fill the buffer when possible
+				updates = 0;
+			
+				if (BUFFER_SIZE - audio_buf_bytes >= spc_buf_size )
+				{
+					if (!g_cfg_novideo) {
+						if (SDL_MUSTLOCK(memsurface)) {
+							SDL_LockSurface(memsurface);
+						}
+					}
+					while (BUFFER_SIZE - audio_buf_bytes >= spc_buf_size) {
+						SDL_LockAudio();
+						SPC_update(&audiobuf[audio_buf_bytes]);
+						SDL_UnlockAudio();
+
+						audio_buf_bytes += spc_buf_size;
+					}
+					if (!g_cfg_novideo) {
+						if (SDL_MUSTLOCK(memsurface)) {
+							SDL_UnlockSurface(memsurface);
+						}
+					}
+				}
+			}
+
+		}
 	
-		if (!g_cfg_update_in_callback)
+		if (!g_cfg_novideo)
 		{
-			// fill the buffer when possible
-			updates = 0;
-		
-			if (BUFFER_SIZE - audio_buf_bytes >= spc_buf_size )
-			{
-				if (SDL_MUSTLOCK(memsurface)) {
-					SDL_LockSurface(memsurface);
-				}
-				while (BUFFER_SIZE - audio_buf_bytes >= spc_buf_size) {
-					SDL_LockAudio();
-					SPC_update(&audiobuf[audio_buf_bytes]);
-					SDL_UnlockAudio();
 
-					audio_buf_bytes += spc_buf_size;
-				}
-				if (SDL_MUSTLOCK(memsurface)) {
-					SDL_UnlockSurface(memsurface);
-				}
-			}
-		}
-		
-		fade_arrays();			
-		memrect.x = MEMORY_VIEW_X; memrect.y = MEMORY_VIEW_Y;
-//		SDL_LockAudio();
-		
-		// draw the memory read/write display area
-		SDL_BlitSurface(memsurface, NULL, screen, &memrect);	
+			fade_arrays();			
+			memrect.x = MEMORY_VIEW_X; memrect.y = MEMORY_VIEW_Y;
+	//		SDL_LockAudio();
+			
+			// draw the memory read/write display area
+			SDL_BlitSurface(memsurface, NULL, screen, &memrect);	
 
-		// draw the 256 bytes block usage bar
-		tmprect.x = MEMORY_VIEW_X-3;
-		tmprect.w = 2; tmprect.h = 2;
-		tmp=0;
-		for (i=0; i<256; i++)
-		{
-			tmprect.y = MEMORY_VIEW_Y + i * 2;
-			if (used2[i])
-			{
-				SDL_FillRect(screen, &tmprect, color_screen_white);	
-				tmp++;
-			}
-		}
-		
-//		SDL_UnlockAudio();
-
-		sprintf(tmpbuf, "Blocks used: %3d/256 (%.1f%%)  ", tmp, (float)tmp*100.0/256.0);
-		sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y + memsurface->h + 2, tmpbuf, color_screen_white);
-
-		{
-			unsigned char packed_mask[32];
-			memset(packed_mask, 0, 32);
+			// draw the 256 bytes block usage bar
+			tmprect.x = MEMORY_VIEW_X-3;
+			tmprect.w = 2; tmprect.h = 2;
+			tmp=0;
 			for (i=0; i<256; i++)
 			{
+				tmprect.y = MEMORY_VIEW_Y + i * 2;
 				if (used2[i])
-				packed_mask[i/8] |=	128 >> (i%8);
-			}
-			for (i=0; i<32; i++) {
-				sprintf(tmpbuf+(i*2), "%02X",packed_mask[i]);
-			}
-			sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y + memsurface->h + 2 + 9, tmpbuf, color_screen_white);
-		}
-		
-		// write the address under mouse cursor
-		if (cur_mouse_address >=0)
-		{
-			sprintf(tmpbuf, "Addr mouse: $%04X", cur_mouse_address);
-			sdlfont_drawString(screen, MEMORY_VIEW_X+8*(13+9), MEMORY_VIEW_Y-10, tmpbuf, color_screen_white);
-		}
-
-		// write the program counter
-		sprintf(tmpbuf, "PC: $%04x", last_pc);
-		sdlfont_drawString(screen, MEMORY_VIEW_X+8*12, MEMORY_VIEW_Y-10, tmpbuf, color_screen_white);
-
-		tmp = i+10; // y 
-		
-		sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp, "Voices pitchs:", color_screen_white);
-		tmp += 9;
-		
-		tmprect.x=MEMORY_VIEW_X+520;
-		tmprect.y=tmp;
-		tmprect.w=screen->w-tmprect.x;
-		tmprect.h=8*8;
-		SDL_FillRect(screen, &tmprect, color_screen_black);
-		tmprect.w=5;
-		tmprect.h = 5;
-		for (i=0; i<8; i++)
-		{
-			unsigned short pitch = APU.DSP[2+(i*0x10)] | (APU.DSP[3+(i*0x10)]<<8);
-			Uint32 cur_color;
-		
-			if (APU.DSP[0x5c]&(1<<i)) {
-				cur_color = color_screen_white;
-			} else {
-				cur_color = color_screen_gray;
+				{
+					SDL_FillRect(screen, &tmprect, color_screen_white);	
+					tmp++;
+				}
 			}
 			
-			sprintf(tmpbuf,"%d:",i);
-			sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp + (i*8), tmpbuf, color_screen_white);
-			
-			tmprect.y= tmp+(i*8)+2;
-			tmprect.x = MEMORY_VIEW_X+520+18;
-			tmprect.x += pitch*(screen->w-tmprect.x-20)/((0x10000)>>2);
-			SDL_FillRect(screen, &tmprect, color_screen_white);
-			
-		}
-		tmp += 9*8;
-		
-		sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp, "Voices volumes:", color_screen_white);
-		sdlfont_drawString(screen, MEMORY_VIEW_X+520+(16*8), tmp, "Left", color_screen_yellow);
-		sdlfont_drawString(screen, MEMORY_VIEW_X+520+(20*8)+4, tmp, "Right", color_screen_cyan);
-		sdlfont_drawString(screen, MEMORY_VIEW_X+520+(26*8), tmp, "Gain", color_screen_magenta);
-		tmp += 9;
+	//		SDL_UnlockAudio();
 
-		tmprect.x=MEMORY_VIEW_X+520;
-		tmprect.y=tmp;
-		tmprect.w=screen->w-tmprect.x;
-		tmprect.h=8*10;
-		SDL_FillRect(screen, &tmprect, color_screen_black);		
-		tmprect.w=2;
-		tmprect.h=2;
-		for (i=0; i<8; i++)
-		{
-			unsigned char left_vol = APU.DSP[0+(i*0x10)];
-			unsigned char right_vol = APU.DSP[1+(i*0x10)];
-			unsigned char gain = APU.DSP[7+(i*0x10)];
+			sprintf(tmpbuf, "Blocks used: %3d/256 (%.1f%%)  ", tmp, (float)tmp*100.0/256.0);
+			sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y + memsurface->h + 2, tmpbuf, color_screen_white);
 
-			sprintf(tmpbuf,"%d:", i);
-			sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp + (i*10), tmpbuf, color_screen_white);
-			tmprect.x = MEMORY_VIEW_X+520+18;
-			tmprect.y = tmp+(i*10);
-			tmprect.w = left_vol*(screen->w-tmprect.x-20)/255;
-
-			SDL_FillRect(screen, &tmprect, color_screen_yellow);
-
-			tmprect.x = MEMORY_VIEW_X+520+18;
-			tmprect.w = right_vol*(screen->w-tmprect.x-20)/255;
-			tmprect.y = tmp+(i*10)+3;
-			
-			SDL_FillRect(screen, &tmprect, color_screen_cyan);
-
-			tmprect.x = MEMORY_VIEW_X+520+18;
-			tmprect.w = gain * (screen->w-tmprect.x-20)/255;
-			tmprect.y = tmp+(i*10)+6;
-			SDL_FillRect(screen, &tmprect, color_screen_magenta);
-		}
-		tmp += 8*10 + 8;
-
-		sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp, "Mouseover Hexdump:", color_screen_white);
-		tmp+=9;
-		if (cur_mouse_address>=0)
-		{
-	
-			for (i=0; i<128; i+=8)
 			{
-				unsigned char *st = &IAPU.RAM[cur_mouse_address+i];
-				int p = MEMORY_VIEW_X+520, j;
-				sprintf(tmpbuf, "%04X: ", cur_mouse_address+i);
-				sdlfont_drawString(screen, p, tmp, tmpbuf, color_screen_white);
-				p += 6*8;
-				for (j=0; j<8; j++) {
-					int idx = ((cur_mouse_address+i+j)&0xff00)<<4;	
-					idx += ((cur_mouse_address+i+j) % 256)<<3;
-					Uint32 color = SDL_MapRGB(screen->format, 
-							0x7f + (memsurface_data[idx]>>1), 
-							0x7f + (memsurface_data[idx+1]>>1), 
-							0x7f + (memsurface_data[idx+2]>>1)
-							);
-							
-					sprintf(tmpbuf, "%02X ", *st);
-					st++;
-					sdlfont_drawString(screen, p, tmp, tmpbuf, color);
-					p+= 2*8 + 4;
+				unsigned char packed_mask[32];
+				memset(packed_mask, 0, 32);
+				for (i=0; i<256; i++)
+				{
+					if (used2[i])
+					packed_mask[i/8] |=	128 >> (i%8);
+				}
+				for (i=0; i<32; i++) {
+					sprintf(tmpbuf+(i*2), "%02X",packed_mask[i]);
+				}
+				sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y + memsurface->h + 2 + 9, tmpbuf, color_screen_white);
+			}
+			
+			// write the address under mouse cursor
+			if (cur_mouse_address >=0)
+			{
+				sprintf(tmpbuf, "Addr mouse: $%04X", cur_mouse_address);
+				sdlfont_drawString(screen, MEMORY_VIEW_X+8*(13+9), MEMORY_VIEW_Y-10, tmpbuf, color_screen_white);
+			}
+
+			// write the program counter
+			sprintf(tmpbuf, "PC: $%04x", last_pc);
+			sdlfont_drawString(screen, MEMORY_VIEW_X+8*12, MEMORY_VIEW_Y-10, tmpbuf, color_screen_white);
+
+			tmp = i+10; // y 
+			
+			sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp, "Voices pitchs:", color_screen_white);
+			tmp += 9;
+			
+			tmprect.x=MEMORY_VIEW_X+520;
+			tmprect.y=tmp;
+			tmprect.w=screen->w-tmprect.x;
+			tmprect.h=8*8;
+			SDL_FillRect(screen, &tmprect, color_screen_black);
+			tmprect.w=5;
+			tmprect.h = 5;
+			for (i=0; i<8; i++)
+			{
+				unsigned short pitch = APU.DSP[2+(i*0x10)] | (APU.DSP[3+(i*0x10)]<<8);
+				Uint32 cur_color;
+			
+				if (APU.DSP[0x5c]&(1<<i)) {
+					cur_color = color_screen_white;
+				} else {
+					cur_color = color_screen_gray;
 				}
 				
-				tmp += 9;
+				sprintf(tmpbuf,"%d:",i);
+				sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp + (i*8), tmpbuf, color_screen_white);
+				
+				tmprect.y= tmp+(i*8)+2;
+				tmprect.x = MEMORY_VIEW_X+520+18;
+				tmprect.x += pitch*(screen->w-tmprect.x-20)/((0x10000)>>2);
+				SDL_FillRect(screen, &tmprect, color_screen_white);
+				
 			}
-		}
+			tmp += 9*8;
+			
+			sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp, "Voices volumes:", color_screen_white);
+			sdlfont_drawString(screen, MEMORY_VIEW_X+520+(16*8), tmp, "Left", color_screen_yellow);
+			sdlfont_drawString(screen, MEMORY_VIEW_X+520+(20*8)+4, tmp, "Right", color_screen_cyan);
+			sdlfont_drawString(screen, MEMORY_VIEW_X+520+(26*8), tmp, "Gain", color_screen_magenta);
+			tmp += 9;
 
+			tmprect.x=MEMORY_VIEW_X+520;
+			tmprect.y=tmp;
+			tmprect.w=screen->w-tmprect.x;
+			tmprect.h=8*10;
+			SDL_FillRect(screen, &tmprect, color_screen_black);		
+			tmprect.w=2;
+			tmprect.h=2;
+			for (i=0; i<8; i++)
+			{
+				unsigned char left_vol = APU.DSP[0+(i*0x10)];
+				unsigned char right_vol = APU.DSP[1+(i*0x10)];
+				unsigned char gain = APU.DSP[7+(i*0x10)];
 
-		sdlfont_drawString(screen, PORTTOOL_X, PORTTOOL_Y, "     - Port tool -", color_screen_white);
-		sdlfont_drawString(screen, PORTTOOL_X, PORTTOOL_Y+8, " APU:", color_screen_white);
-		sdlfont_drawString(screen, PORTTOOL_X, PORTTOOL_Y+16, "SNES:", color_screen_white);
+				sprintf(tmpbuf,"%d:", i);
+				sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp + (i*10), tmpbuf, color_screen_white);
+				tmprect.x = MEMORY_VIEW_X+520+18;
+				tmprect.y = tmp+(i*10);
+				tmprect.w = left_vol*(screen->w-tmprect.x-20)/255;
 
-		sprintf(tmpbuf, " +%02X- +%02X- +%02X- +%02X-", IAPU.RAM[0xf4], APU.OutPorts[0xf5], APU.OutPorts[0xf6], APU.OutPorts[0xf7]);		
-		sdlfont_drawString(screen, PORTTOOL_X + (8*5), PORTTOOL_Y+8, tmpbuf, color_screen_white);
+				SDL_FillRect(screen, &tmprect, color_screen_yellow);
+
+				tmprect.x = MEMORY_VIEW_X+520+18;
+				tmprect.w = right_vol*(screen->w-tmprect.x-20)/255;
+				tmprect.y = tmp+(i*10)+3;
+				
+				SDL_FillRect(screen, &tmprect, color_screen_cyan);
+
+				tmprect.x = MEMORY_VIEW_X+520+18;
+				tmprect.w = gain * (screen->w-tmprect.x-20)/255;
+				tmprect.y = tmp+(i*10)+6;
+				SDL_FillRect(screen, &tmprect, color_screen_magenta);
+			}
+			tmp += 8*10 + 8;
+
+			sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp, "Mouseover Hexdump:", color_screen_white);
+			tmp+=9;
+			if (cur_mouse_address>=0)
+			{
 		
-		sprintf(tmpbuf, "  %02X   %02X   %02X    %02X", APU.OutPorts[0], APU.OutPorts[1], APU.OutPorts[2], APU.OutPorts[3]);		
-		sdlfont_drawString(screen, PORTTOOL_X + (8*5), PORTTOOL_Y+16, tmpbuf, color_screen_white);
+				for (i=0; i<128; i+=8)
+				{
+					unsigned char *st = &IAPU.RAM[cur_mouse_address+i];
+					int p = MEMORY_VIEW_X+520, j;
+					sprintf(tmpbuf, "%04X: ", cur_mouse_address+i);
+					sdlfont_drawString(screen, p, tmp, tmpbuf, color_screen_white);
+					p += 6*8;
+					for (j=0; j<8; j++) {
+						int idx = ((cur_mouse_address+i+j)&0xff00)<<4;	
+						idx += ((cur_mouse_address+i+j) % 256)<<3;
+						Uint32 color = SDL_MapRGB(screen->format, 
+								0x7f + (memsurface_data[idx]>>1), 
+								0x7f + (memsurface_data[idx+1]>>1), 
+								0x7f + (memsurface_data[idx+2]>>1)
+								);
+								
+						sprintf(tmpbuf, "%02X ", *st);
+						st++;
+						sdlfont_drawString(screen, p, tmp, tmpbuf, color);
+						p+= 2*8 + 4;
+					}
+					
+					tmp += 9;
+				}
+			}
 
-		
-		SDL_UpdateRect(screen, 0, 0, 0, 0);
+
+			sdlfont_drawString(screen, PORTTOOL_X, PORTTOOL_Y, "     - Port tool -", color_screen_white);
+			sdlfont_drawString(screen, PORTTOOL_X, PORTTOOL_Y+8, " APU:", color_screen_white);
+			sdlfont_drawString(screen, PORTTOOL_X, PORTTOOL_Y+16, "SNES:", color_screen_white);
+
+			sprintf(tmpbuf, " +%02X- +%02X- +%02X- +%02X-", IAPU.RAM[0xf4], APU.OutPorts[0xf5], APU.OutPorts[0xf6], APU.OutPorts[0xf7]);		
+			sdlfont_drawString(screen, PORTTOOL_X + (8*5), PORTTOOL_Y+8, tmpbuf, color_screen_white);
+			
+			sprintf(tmpbuf, "  %02X   %02X   %02X    %02X", APU.OutPorts[0], APU.OutPorts[1], APU.OutPorts[2], APU.OutPorts[3]);		
+			sdlfont_drawString(screen, PORTTOOL_X + (8*5), PORTTOOL_Y+16, tmpbuf, color_screen_white);
+
+			
+			SDL_UpdateRect(screen, 0, 0, 0, 0);
+		} // if !g_cfg_novideo
 
 	}
 clean:
