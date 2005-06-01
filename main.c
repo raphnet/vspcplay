@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.3 2005/06/01 16:24:33 raph Exp $ */
+/* $Id: main.c,v 1.4 2005/06/01 16:34:39 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -392,17 +392,33 @@ int main(int argc, char **argv)
 								cur_mouse_address = -1;
 							}
 
-							if (	(ev.motion.x >= PORTTOOL_X + (8*5)) &&
-									ev.motion.y >= PORTTOOL_Y)
+						
+						}
+						break;
+					case SDL_MOUSEBUTTONDOWN:
+						{
+							if (	(ev.button.x >= PORTTOOL_X + (8*5)) &&
+									ev.button.y >= PORTTOOL_Y)
 							{
 								int x, y;
-								x = ev.motion.x - (PORTTOOL_X + (8*5));
+								x = ev.button.x - (PORTTOOL_X + (8*5));
 								x /= 8;
-								y = ev.motion.y - PORTTOOL_Y;
+								y = ev.button.y - PORTTOOL_Y;
 								y /= 8;
 								if (y==1) 
 								printf("%d\n", x);
-							}
+								switch (x)
+								{
+									case 1: IAPU.RAM[0xf4]++; break;
+									case 4: IAPU.RAM[0xf4]--; break;
+									case 6: IAPU.RAM[0xf5]++; break;
+									case 9: IAPU.RAM[0xf5]--; break;
+									case 11: IAPU.RAM[0xf6]++; break;
+									case 14: IAPU.RAM[0xf6]--; break;
+									case 16: IAPU.RAM[0xf7]++; break;
+									case 19: IAPU.RAM[0xf7]--; break;
+								}
+							}	
 						}
 						break;
 				}
@@ -608,10 +624,10 @@ int main(int argc, char **argv)
 			sdlfont_drawString(screen, PORTTOOL_X, PORTTOOL_Y+8, " APU:", color_screen_white);
 			sdlfont_drawString(screen, PORTTOOL_X, PORTTOOL_Y+16, "SNES:", color_screen_white);
 
-			sprintf(tmpbuf, " +%02X- +%02X- +%02X- +%02X-", IAPU.RAM[0xf4], APU.OutPorts[0xf5], APU.OutPorts[0xf6], APU.OutPorts[0xf7]);		
+			sprintf(tmpbuf, " +%02X- +%02X- +%02X- +%02X-", IAPU.RAM[0xf4], IAPU.RAM[0xf5], IAPU.RAM[0xf6], IAPU.RAM[0xf7]);		
 			sdlfont_drawString(screen, PORTTOOL_X + (8*5), PORTTOOL_Y+8, tmpbuf, color_screen_white);
 			
-			sprintf(tmpbuf, "  %02X   %02X   %02X    %02X", APU.OutPorts[0], APU.OutPorts[1], APU.OutPorts[2], APU.OutPorts[3]);		
+			sprintf(tmpbuf, "  %02X   %02X   %02X   %02X", APU.OutPorts[0], APU.OutPorts[1], APU.OutPorts[2], APU.OutPorts[3]);		
 			sdlfont_drawString(screen, PORTTOOL_X + (8*5), PORTTOOL_Y+16, tmpbuf, color_screen_white);
 
 			
