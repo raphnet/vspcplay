@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.5 2005/06/01 16:44:24 raph Exp $ */
+/* $Id: main.c,v 1.6 2005/06/02 16:38:48 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -74,7 +74,6 @@ static int g_cfg_update_in_callback = 0;
 static int g_cfg_num_files = 0;
 static char **g_cfg_playlist = NULL;
 
-
 SDL_Surface *screen=NULL;
 SDL_Surface *memsurface=NULL;
 static unsigned char *memsurface_data=NULL;
@@ -99,7 +98,7 @@ void report_memread3(unsigned short address, unsigned char value)
 void report_memread2(unsigned short address, unsigned char value)
 {
 	int idx = (address&0xff00)<<4;
-	
+
 	idx += (address % 256)<<3;
 	
 	used[address&0xffff] = 1;	
@@ -317,7 +316,8 @@ int main(int argc, char **argv)
 	SDL_Rect tmprect;
 	SDL_Rect memrect;
 	char tmpbuf[30];
-
+	int cur_entry = 0;
+	
 	memset(used, 0, 65536);
 
 	parse_args(argc, argv);
@@ -354,8 +354,12 @@ int main(int argc, char **argv)
 		sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y-10, "spc memory:", color_screen_white);
 
 	}
-	
-    SPC_load(g_cfg_playlist[0]);
+
+reload:
+    SPC_load(g_cfg_playlist[cur_entry]);
+	memset(memsurface_data, 0, 512*512*4);
+	memset(used, 0, sizeof(used));
+	memset(used2, 0, sizeof(used2));
 	
 	SDL_PauseAudio(0);
     for (;;) 
@@ -395,30 +399,72 @@ int main(int argc, char **argv)
 						
 						}
 						break;
-					case SDL_MOUSEBUTTONDOWN:
+					case SDL_MOUSEBUTTONDOWN:						
 						{
+							/* porttool */
 							if (	(ev.button.x >= PORTTOOL_X + (8*5)) &&
 									ev.button.y >= PORTTOOL_Y)
 							{
-								int x, y;
+								int x, y, m;
 								x = ev.button.x - (PORTTOOL_X + (8*5));
 								x /= 8;
 								y = ev.button.y - PORTTOOL_Y;
 								y /= 8;
 								if (y==1) 
-								printf("%d\n", x);
-								switch (x)
+//								printf("%d\n", x);
+								if (ev.button.button == SDL_BUTTON_LEFT)
 								{
-									case 1: IAPU.RAM[0xf4]++; break;
-									case 4: IAPU.RAM[0xf4]--; break;
-									case 6: IAPU.RAM[0xf5]++; break;
-									case 9: IAPU.RAM[0xf5]--; break;
-									case 11: IAPU.RAM[0xf6]++; break;
-									case 14: IAPU.RAM[0xf6]--; break;
-									case 16: IAPU.RAM[0xf7]++; break;
-									case 19: IAPU.RAM[0xf7]--; break;
+									switch (x)
+									{
+										case 1: IAPU.RAM[0xf4]++; break;
+										case 4: IAPU.RAM[0xf4]--; break;
+										case 6: IAPU.RAM[0xf5]++; break;
+										case 9: IAPU.RAM[0xf5]--; break;
+										case 11: IAPU.RAM[0xf6]++; break;
+										case 14: IAPU.RAM[0xf6]--; break;
+										case 16: IAPU.RAM[0xf7]++; break;
+										case 19: IAPU.RAM[0xf7]--; break;
+									}
+								}
+								if (ev.button.button == SDL_BUTTON_WHEELUP ||
+									ev.button.button == SDL_BUTTON_WHEELDOWN)
+								{
+									if (ev.button.button == SDL_BUTTON_WHEELUP) { i=1; } else { i = -1; }
+									if (x>1 && x<4) { IAPU.RAM[0xf4] += i; }
+									if (x>6 && x<9) { IAPU.RAM[0xf5] += i; }
+									if (x>11 && x<14) { IAPU.RAM[0xf6] += i; }
+									if (x>16 && x<19) { IAPU.RAM[0xf7] += i; }
 								}
 							}	
+
+							/* menu bar */
+							if ( (ev.button.x >= 0) &&
+								((ev.button.y >screen->h-9) && (ev.button.y<screen->h)))
+							{
+								int x = ev.button.x / 8;
+								if (x>=1 && x<=4) { goto clean; } // exit
+								if (x>=8 && x<=12) { } // pause
+
+								if (x>=16 && x<=22) {  // restart
+									SDL_PauseAudio(0);
+									goto reload;
+								}
+
+								if (x>=26 && x<=29) {  // prev
+									SDL_PauseAudio(0);
+									cur_entry--;
+									if (cur_entry<0) { cur_entry = g_cfg_num_files-1; }
+									goto reload;
+
+								}
+
+								if (x>=33 && x<=36) { // next
+									SDL_PauseAudio(0);
+									cur_entry++;
+									if (cur_entry>=g_cfg_num_files) { cur_entry = 0; }
+									goto reload;
+								}
+							}
 						}
 						break;
 				}
@@ -486,6 +532,9 @@ int main(int argc, char **argv)
 			
 	//		SDL_UnlockAudio();
 
+			sprintf(tmpbuf, " QUIT - PAUSE - RESTART - PREV - NEXT ");
+			sdlfont_drawString(screen, 0, screen->h-9, tmpbuf, color_screen_yellow);
+			
 			sprintf(tmpbuf, "Blocks used: %3d/256 (%.1f%%)  ", tmp, (float)tmp*100.0/256.0);
 			sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y + memsurface->h + 2, tmpbuf, color_screen_white);
 
