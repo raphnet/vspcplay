@@ -78,7 +78,10 @@ void sdlfont_drawString(SDL_Surface *dst, int x, int y, const char *string, Uint
 
 	for (n=0; n<len; n++)
 	{
-		_sdlfont_drawChar(dst, x + (n*8), y, *string, color);
+		if ((n*8)+x+8 >= dst->w) {
+		} else {
+			_sdlfont_drawChar(dst, x + (n*8), y, *string, color);
+		}
 		string++;
 	}
 	

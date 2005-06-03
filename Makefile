@@ -8,7 +8,7 @@ LDFLAGS=`sdl-config --libs`
 
 PROG=vspcplay
 
-OBJS = apu.o globals.o libspc.o soundux.o spc700.o main.o font.o sdlfont.o
+OBJS = apu.o globals.o libspc.o soundux.o spc700.o main.o font.o sdlfont.o id666.o
 
 all: $(PROG)
 

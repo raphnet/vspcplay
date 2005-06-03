@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.7 2005/06/03 16:43:10 raph Exp $ */
+/* $Id: main.c,v 1.8 2005/06/03 17:18:36 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -33,6 +33,7 @@
 #include <fcntl.h>
 #include "getopt.h"
 #include "libspc.h"
+#include "id666.h"
 
 #include "spc_structs.h"
 #include "SDL.h"
@@ -53,6 +54,8 @@ static int last_pc=0;
 #define MEMORY_VIEW_Y	40
 #define PORTTOOL_X		540
 #define PORTTOOL_Y		380
+#define INFO_X			540
+#define INFO_Y			420
 
 SPC_Config spc_config = {
     44100,
@@ -318,6 +321,8 @@ int main(int argc, char **argv)
 	SDL_Rect memrect;
 	char tmpbuf[30];
 	int cur_entry = 0;
+	id666_tag tag;
+	char *real_filename;
 	
 	memset(used, 0, 65536);
 
@@ -338,8 +343,68 @@ int main(int argc, char **argv)
 	memsurface_data = malloc(512*512*4);
 	memset(memsurface_data, 0, 512*512*4);
 
+reload:
+#ifdef WIN32
+	real_filename = strrchr(g_cfg_playlist[cur_entry], '\\');
+#else
+	real_filename = strrchr(g_cfg_playlist[cur_entry], '/');
+#endif
+	if (!real_filename) {
+		real_filename = g_cfg_playlist[cur_entry];
+	}
+	else {
+		// skip path sep
+		real_filename++;
+	}	
+	
+	{
+		FILE *fptr;
+		fptr = fopen(g_cfg_playlist[cur_entry], "rb");
+		if (fptr==NULL) {
+			printf("Failure\n");
+				if (cur_entry == g_cfg_num_files-1) {
+				g_cfg_num_files--;
+			}
+			else
+			{
+				memmove(&g_cfg_playlist[cur_entry], &g_cfg_playlist[cur_entry+1], g_cfg_num_files-cur_entry);
+				g_cfg_num_files--;
+				cur_entry++;
+			}
+			if (g_cfg_num_files<=0) { goto clean; }
+			if (cur_entry >= g_cfg_num_files) { cur_entry = 0; }
+			goto reload;
+		}
+		
+		read_id666(fptr, &tag); 
+		
+		fclose(fptr);
+	}
+	
+    if (!SPC_load(g_cfg_playlist[cur_entry])) 
+	{
+		printf("Failure\n");
+		if (cur_entry == g_cfg_num_files-1) {
+			g_cfg_num_files--;
+		}
+		else
+		{
+			memmove(&g_cfg_playlist[cur_entry], &g_cfg_playlist[cur_entry+1], g_cfg_num_files-cur_entry);
+			g_cfg_num_files--;
+			cur_entry++;
+		}
+		if (g_cfg_num_files<=0) { goto clean; }
+		if (cur_entry >= g_cfg_num_files) { cur_entry = 0; }
+	}
+	memset(memsurface_data, 0, 512*512*4);
+	memset(used, 0, sizeof(used));
+	memset(used2, 0, sizeof(used2));
+	cur_mouse_address =0;
+
+	// draw one-time stuff
 	if (!g_cfg_novideo)
 	{
+		SDL_FillRect(screen, NULL, 0);
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
 		memsurface = SDL_CreateRGBSurfaceFrom(memsurface_data,512,512,32,2048,0xFF000000,0x00FF0000,0x0000FF00,0x0);
 #else
@@ -354,14 +419,28 @@ int main(int argc, char **argv)
 		
 		sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y-10, "spc memory:", color_screen_white);
 
+		sprintf(tmpbuf, " QUIT - PAUSE - RESTART - PREV - NEXT ");
+		sdlfont_drawString(screen, 0, screen->h-9, tmpbuf, color_screen_yellow);
+
+		/* information */
+		sdlfont_drawString(screen, INFO_X, INFO_Y, "      - Info -", color_screen_white);
+		sprintf(tmpbuf, "Filename: %s", real_filename);
+		sdlfont_drawString(screen, INFO_X, INFO_Y+8, tmpbuf, color_screen_white);
+		sprintf(tmpbuf, "Title...: %s", tag.title);
+		sdlfont_drawString(screen, INFO_X, INFO_Y+16, tmpbuf, color_screen_white);
+		sprintf(tmpbuf, "Game....: %s", tag.game_title);
+		sdlfont_drawString(screen, INFO_X, INFO_Y+24, tmpbuf, color_screen_white);
+		sprintf(tmpbuf, "Dumper..: %s", tag.name_of_dumper);
+		sdlfont_drawString(screen, INFO_X, INFO_Y+32, tmpbuf, color_screen_white);
+		sprintf(tmpbuf, "Comment.: %s", tag.comments);
+		sdlfont_drawString(screen, INFO_X, INFO_Y+40, tmpbuf, color_screen_white);
+		sprintf(tmpbuf, "Time....: %00d:%02d", 
+				atoi(tag.seconds_til_fadeout)/60, 
+				atoi(tag.seconds_til_fadeout)%60);
+		sdlfont_drawString(screen, INFO_X, INFO_Y+48, tmpbuf, color_screen_white);
 	}
 
-reload:
-    SPC_load(g_cfg_playlist[cur_entry]);
-	memset(memsurface_data, 0, 512*512*4);
-	memset(used, 0, sizeof(used));
-	memset(used2, 0, sizeof(used2));
-	
+
 	SDL_PauseAudio(0);
 	g_paused = 0;
     for (;;) 
@@ -540,8 +619,6 @@ reload:
 			
 	//		SDL_UnlockAudio();
 
-			sprintf(tmpbuf, " QUIT - PAUSE - RESTART - PREV - NEXT ");
-			sdlfont_drawString(screen, 0, screen->h-9, tmpbuf, color_screen_yellow);
 			
 			sprintf(tmpbuf, "Blocks used: %3d/256 (%.1f%%)  ", tmp, (float)tmp*100.0/256.0);
 			sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y + memsurface->h + 2, tmpbuf, color_screen_white);
