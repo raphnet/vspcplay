@@ -1,0 +1,12 @@
+This is vspcplay, a visual spc player.
+
+I used the code from the spc-xmms plugin, which uses the snes9x APU emulation
+code. I updated the snes9x code using a newer version of snes9x (I dont remember
+which version exactly).
+
+The display code is mine.
+
+The homepage for this project is http://vspcplay.raphnet.net
+
+Regards,
+Raphael Assenat
