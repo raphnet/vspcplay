@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.6 2005/06/02 16:38:48 raph Exp $ */
+/* $Id: main.c,v 1.7 2005/06/03 16:43:10 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -73,6 +73,7 @@ static int g_cfg_novideo = 0;
 static int g_cfg_update_in_callback = 0;
 static int g_cfg_num_files = 0;
 static char **g_cfg_playlist = NULL;
+static int g_paused = 0;
 
 SDL_Surface *screen=NULL;
 SDL_Surface *memsurface=NULL;
@@ -362,6 +363,7 @@ reload:
 	memset(used2, 0, sizeof(used2));
 	
 	SDL_PauseAudio(0);
+	g_paused = 0;
     for (;;) 
 	{		
 		SDL_Event ev;
@@ -443,15 +445,21 @@ reload:
 							{
 								int x = ev.button.x / 8;
 								if (x>=1 && x<=4) { goto clean; } // exit
-								if (x>=8 && x<=12) { } // pause
+								if (x>=8 && x<=12) { 
+									if (g_paused) { 
+										g_paused = 0; SDL_PauseAudio(0); 
+									} else {
+										g_paused = 1; SDL_PauseAudio(1);
+									}
+								} // pause
 
 								if (x>=16 && x<=22) {  // restart
-									SDL_PauseAudio(0);
+									SDL_PauseAudio(1);
 									goto reload;
 								}
 
 								if (x>=26 && x<=29) {  // prev
-									SDL_PauseAudio(0);
+									SDL_PauseAudio(1);
 									cur_entry--;
 									if (cur_entry<0) { cur_entry = g_cfg_num_files-1; }
 									goto reload;
@@ -459,7 +467,7 @@ reload:
 								}
 
 								if (x>=33 && x<=36) { // next
-									SDL_PauseAudio(0);
+									SDL_PauseAudio(1);
 									cur_entry++;
 									if (cur_entry>=g_cfg_num_files) { cur_entry = 0; }
 									goto reload;
@@ -477,7 +485,7 @@ reload:
 		else
 		{	
 			
-			if (!g_cfg_update_in_callback)
+			if (!g_cfg_update_in_callback && !g_paused)
 			{
 				// fill the buffer when possible
 				updates = 0;
