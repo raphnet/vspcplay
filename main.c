@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.8 2005/06/03 17:18:36 raph Exp $ */
+/* $Id: main.c,v 1.9 2005/06/04 01:56:58 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -31,6 +31,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <math.h>
 #include "getopt.h"
 #include "libspc.h"
 #include "id666.h"
@@ -40,11 +41,8 @@
 
 #include "sdlfont.h"
 
-static int is_verbose;
+//static int is_verbose;
 
-static int get_options (int argc, char **argv);
-static void usage (void);
-static void display_version (void);
 static int last_pc=0;
 
 #define PACKAGE "spcview"
@@ -57,12 +55,17 @@ static int last_pc=0;
 #define INFO_X			540
 #define INFO_Y			420
 
+// 5 minutes default
+#define DEFAULT_SONGTIME	(60*5) 
+
+#define PROG_NAME_VERSION_STRING "vspcplay v1.0"
+
 SPC_Config spc_config = {
     44100,
     16,
     2,
-    0,
-    0
+    0, // interpolation
+    0 // echo
 };
 
 static unsigned char used[65536];
@@ -87,6 +90,7 @@ static int audio_buf_bytes=0, spc_buf_size;
 
 Uint32 color_screen_white, color_screen_black, color_screen_cyan, color_screen_magenta, color_screen_yellow;
 Uint32 color_screen_gray;
+Uint32 colorscale[12];
 
 void putpixel(SDL_Surface *surface, int x, int y, Uint32 pixel);
 void put4pixel(SDL_Surface *surface, int x, int y, Uint32 pixel);
@@ -177,10 +181,12 @@ void fade_arrays()
 	}
 }
 
+static int audio_samples_written=0;
 
 void my_audio_callback(void *userdata, Uint8 *stream, int len)
 {
 //	printf("Callback %d  audio_buf_bytes: %d\n", len, audio_buf_bytes);
+	
 	if (g_cfg_update_in_callback)
 	{
 		while (len>audio_buf_bytes)
@@ -215,6 +221,7 @@ void my_audio_callback(void *userdata, Uint8 *stream, int len)
 	//	printf("\n");
 		SDL_UnlockAudio();
 	}
+	audio_samples_written += len/4; // 16bit stereo
 }
 
 int parse_args(int argc, char **argv)
@@ -224,6 +231,8 @@ int parse_args(int argc, char **argv)
 		{"nosound", 0, 0, 0},
 		{"novideo", 0, 0, 1},
 		{"update_in_callback", 0, 0, 2},
+		{"echo", 0, 0, 3},
+		{"interpolation", 0, 0, 4},
 		{"help", 0, 0, 'h'},
 		{0,0,0,0}
 	};
@@ -239,6 +248,15 @@ int parse_args(int argc, char **argv)
 			case 1:
 				g_cfg_novideo = 2;
 				break;
+			case 2:
+				g_cfg_update_in_callback = 1;
+				break;
+			case 4:
+				spc_config.is_interpolation = 1;
+				break;
+			case 3:
+				spc_config.is_echo = 1;
+				break;
 			case 'h':
 				printf("Usage: ./vspcplay [options] files...\n");
 				printf("\n");
@@ -248,6 +266,8 @@ int parse_args(int argc, char **argv)
 				printf(" --novideo      Dont open video window\n");
 				printf(" --update_in_callback   Update spc sound buffer inside\n");
 				printf("                        sdl audio callback\n");
+				printf(" --interpolation  Use sound interpolatoin\n");
+				printf(" --echo           Enable echo\n");
 				exit(0);
 				break;
 		}
@@ -278,6 +298,8 @@ int init_sdl()
 			return 0;
 		}
 
+		SDL_WM_SetCaption(PROG_NAME_VERSION_STRING, NULL);
+		
 		// precompute some colors
 		color_screen_black = SDL_MapRGB(screen->format, 0x00, 0x00, 0x00);
 		color_screen_white = SDL_MapRGB(screen->format, 0xff, 0xff, 0xff);
@@ -285,6 +307,19 @@ int init_sdl()
 		color_screen_cyan = SDL_MapRGB(screen->format, 0x00, 0xff, 0xff);
 		color_screen_magenta = SDL_MapRGB(screen->format, 0xff, 0x00, 0xff);
 		color_screen_gray = SDL_MapRGB(screen->format, 0x7f, 0x7f, 0x7f);
+
+		colorscale[0] = SDL_MapRGB(screen->format, 0xff, 0x00, 0x00);
+		colorscale[1] = SDL_MapRGB(screen->format, 0xff, 0x7f, 0x00);
+		colorscale[2] = SDL_MapRGB(screen->format, 0xff, 0xff, 0x00);
+		colorscale[3] = SDL_MapRGB(screen->format, 0x7f, 0xff, 0x00);
+		colorscale[4] = SDL_MapRGB(screen->format, 0x00, 0xff, 0x00);
+		colorscale[5] = SDL_MapRGB(screen->format, 0x00, 0xff, 0x7f);
+		colorscale[6] = SDL_MapRGB(screen->format, 0x00, 0xff, 0xff);
+		colorscale[7] = SDL_MapRGB(screen->format, 0x00, 0x7f, 0xff);
+		colorscale[8] = SDL_MapRGB(screen->format, 0x00, 0x00, 0xff);
+		colorscale[9] = SDL_MapRGB(screen->format, 0x7f, 0x00, 0xff);
+		colorscale[10] = SDL_MapRGB(screen->format, 0xff, 0x00, 0xff);
+		colorscale[11] = SDL_MapRGB(screen->format, 0xff, 0x00, 0x7f);
 	}
 	
 	if (!g_cfg_nosound) {
@@ -309,13 +344,9 @@ int init_sdl()
 
 int main(int argc, char **argv)
 {
-    int num_options;
     void *buf=NULL;
-	int dsp_fd=-1;
 	int tmp, i;
-	int res, updates;
-	int blocksize;
-	int loops=0;
+	int updates;
 	int cur_mouse_address=0x0000;
 	SDL_Rect tmprect;
 	SDL_Rect memrect;
@@ -323,6 +354,9 @@ int main(int argc, char **argv)
 	int cur_entry = 0;
 	id666_tag tag;
 	char *real_filename;
+	int song_time, cur_time; // in seconds
+	Uint32 current_ticks, song_started_ticks;
+	unsigned char packed_mask[32];
 	
 	memset(used, 0, 65536);
 
@@ -377,6 +411,11 @@ reload:
 		}
 		
 		read_id666(fptr, &tag); 
+	
+		song_time = atoi(tag.seconds_til_fadeout);
+		if (song_time <= 0) {
+			song_time = DEFAULT_SONGTIME;
+		}
 		
 		fclose(fptr);
 	}
@@ -400,6 +439,8 @@ reload:
 	memset(used, 0, sizeof(used));
 	memset(used2, 0, sizeof(used2));
 	cur_mouse_address =0;
+	cur_time = 0;
+	audio_samples_written = 0;
 
 	// draw one-time stuff
 	if (!g_cfg_novideo)
@@ -419,7 +460,7 @@ reload:
 		
 		sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y-10, "spc memory:", color_screen_white);
 
-		sprintf(tmpbuf, " QUIT - PAUSE - RESTART - PREV - NEXT ");
+		sprintf(tmpbuf, " QUIT - PAUSE - RESTART - PREV - NEXT - WRITE MASK");
 		sdlfont_drawString(screen, 0, screen->h-9, tmpbuf, color_screen_yellow);
 
 		/* information */
@@ -434,17 +475,25 @@ reload:
 		sdlfont_drawString(screen, INFO_X, INFO_Y+32, tmpbuf, color_screen_white);
 		sprintf(tmpbuf, "Comment.: %s", tag.comments);
 		sdlfont_drawString(screen, INFO_X, INFO_Y+40, tmpbuf, color_screen_white);
-		sprintf(tmpbuf, "Time....: %00d:%02d", 
-				atoi(tag.seconds_til_fadeout)/60, 
-				atoi(tag.seconds_til_fadeout)%60);
-		sdlfont_drawString(screen, INFO_X, INFO_Y+48, tmpbuf, color_screen_white);
+			
+		
+		sdlfont_drawString(screen, PORTTOOL_X, PORTTOOL_Y, "     - Port tool -", color_screen_white);
 	}
 
+
+	song_started_ticks = 0;
 
 	SDL_PauseAudio(0);
 	g_paused = 0;
     for (;;) 
-	{		
+	{	
+		if (audio_samples_written/44100 >= song_time) {
+				SDL_PauseAudio(1);
+				cur_entry++;
+				if (cur_entry>=g_cfg_num_files) { goto clean; }
+				goto reload;
+		}
+		
 		SDL_Event ev;
 		
 		if (!g_cfg_novideo)
@@ -486,7 +535,7 @@ reload:
 							if (	(ev.button.x >= PORTTOOL_X + (8*5)) &&
 									ev.button.y >= PORTTOOL_Y)
 							{
-								int x, y, m;
+								int x, y;
 								x = ev.button.x - (PORTTOOL_X + (8*5));
 								x /= 8;
 								y = ev.button.y - PORTTOOL_Y;
@@ -519,8 +568,8 @@ reload:
 							}	
 
 							/* menu bar */
-							if ( (ev.button.x >= 0) &&
-								((ev.button.y >screen->h-9) && (ev.button.y<screen->h)))
+							if (
+								((ev.button.y >screen->h-12) && (ev.button.y<screen->h)))
 							{
 								int x = ev.button.x / 8;
 								if (x>=1 && x<=4) { goto clean; } // exit
@@ -551,6 +600,13 @@ reload:
 									if (cur_entry>=g_cfg_num_files) { cur_entry = 0; }
 									goto reload;
 								}
+
+								if (x>=41 && x<=50) { // write mask
+									for (i=0; i<32; i++) {
+										printf("%02X",packed_mask[i]);
+									}
+									printf("\n");
+								}
 							}
 						}
 						break;
@@ -560,6 +616,7 @@ reload:
 
 		if (g_cfg_nosound) {
 			SPC_update(&audiobuf[audio_buf_bytes]);			
+			audio_samples_written += spc_buf_size/4; // 16bit stereo
 		}
 		else
 		{	
@@ -592,10 +649,45 @@ reload:
 			}
 
 		}
-	
+
+		
 		if (!g_cfg_novideo)
 		{
 
+			{
+				int i;
+				static float start_angle;
+				float angle;
+				static float angle2,angle3;
+				char *pub = "vspcplay by Raphael Assenat. http://vspcplay.raphnet.net";
+				char c[2] = { 0, 0 };	
+				static int cs;
+				
+				cs = audio_samples_written/44100;
+				cs %= 12;
+
+				angle = start_angle;
+				
+				tmprect.x = 0;
+				tmprect.y = 0;
+				tmprect.w = screen->w;
+				tmprect.h = 32;
+				SDL_FillRect(screen, &tmprect, color_screen_black);
+				
+				for (i=0; i<strlen(pub); i++)
+				{
+					int off = (int)((sin(angle)*8.0));
+					angle+= (M_PI)/(float)strlen(pub);
+//					angle+=0.3;
+					c[0] = pub[i];
+					sdlfont_drawString(screen, tmprect.x + i*8, 12+off, c, colorscale[cs]);
+				}
+
+				angle2 += 0.1;
+				//start_angle += 0.3;
+				start_angle += 0.2;
+			}
+			
 			fade_arrays();			
 			memrect.x = MEMORY_VIEW_X; memrect.y = MEMORY_VIEW_Y;
 	//		SDL_LockAudio();
@@ -624,7 +716,6 @@ reload:
 			sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y + memsurface->h + 2, tmpbuf, color_screen_white);
 
 			{
-				unsigned char packed_mask[32];
 				memset(packed_mask, 0, 32);
 				for (i=0; i<256; i++)
 				{
@@ -754,7 +845,6 @@ reload:
 			}
 
 
-			sdlfont_drawString(screen, PORTTOOL_X, PORTTOOL_Y, "     - Port tool -", color_screen_white);
 			sdlfont_drawString(screen, PORTTOOL_X, PORTTOOL_Y+8, " APU:", color_screen_white);
 			sdlfont_drawString(screen, PORTTOOL_X, PORTTOOL_Y+16, "SNES:", color_screen_white);
 
@@ -764,15 +854,21 @@ reload:
 			sprintf(tmpbuf, "  %02X   %02X   %02X   %02X", APU.OutPorts[0], APU.OutPorts[1], APU.OutPorts[2], APU.OutPorts[3]);		
 			sdlfont_drawString(screen, PORTTOOL_X + (8*5), PORTTOOL_Y+16, tmpbuf, color_screen_white);
 
+			current_ticks = audio_samples_written/44100;
+			sprintf(tmpbuf, "Time....: %0d:%02d / %0d:%02d", 
+					(current_ticks-song_started_ticks)/60,
+					((current_ticks-song_started_ticks))%60,
+					song_time/60, song_time%60);
+			sdlfont_drawString(screen, INFO_X, INFO_Y+48, tmpbuf, color_screen_white);
+
 			
 			SDL_UpdateRect(screen, 0, 0, 0, 0);
 		} // if !g_cfg_novideo
 
 	}
 clean:
-//	close(dsp_fd);
-    SPC_close();
 	SDL_Quit();
+    SPC_close();
 
     return 0;
 }
