@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.9 2005/06/04 01:56:58 raph Exp $ */
+/* $Id: main.c,v 1.10 2005/06/04 23:17:44 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -43,7 +43,7 @@
 
 //static int is_verbose;
 
-static int last_pc=0;
+static int last_pc=-1;
 
 #define PACKAGE "spcview"
 #define VERSION "0.01"
@@ -68,7 +68,7 @@ SPC_Config spc_config = {
     0 // echo
 };
 
-static unsigned char used[65536];
+//static unsigned char used[65536];
 static unsigned char used2[256];
 
 extern struct SAPU APU;
@@ -105,19 +105,28 @@ void report_memread3(unsigned short address, unsigned char value)
 
 void report_memread2(unsigned short address, unsigned char value)
 {
-	int idx = (address&0xff00)<<4;
+	int i;
+	int idx;
 
-	idx += (address % 256)<<3;
-	
-	used[address&0xffff] = 1;	
-	used2[(address&0xff00)>>8] = 1;
-	
-	memsurface_data[idx]=0xff;
-	memsurface_data[idx+2048]=0xff;
-	memsurface_data[idx+4]=0xff;
-	memsurface_data[idx+4+2048]=0xff;
-
+	if (address == last_pc) { return; }
 	last_pc = address;
+
+	idx = (address&0xff00)<<4;
+	
+	/* do as if each instruction has 5 bytes */
+	for (i=0; i<5; i++)
+	{
+		idx = (address&0xff00)<<4;
+		idx += (address % 256)<<3;	
+		//used[address&0xffff] = 1;	
+		used2[(address&0xff00)>>8] = 1;
+	
+		memsurface_data[idx]=0xff;
+		memsurface_data[idx+2048]=0xff;
+		memsurface_data[idx+4]=0xff;
+		memsurface_data[idx+4+2048]=0xff;
+		address++;
+	}
 }
 	
 void report_memread(unsigned short address, unsigned char value)
@@ -129,7 +138,7 @@ void report_memread(unsigned short address, unsigned char value)
 	memsurface_data[idx+2048]=0xff;
 	memsurface_data[idx+4]=0xff;
 	memsurface_data[idx+4+2048]=0xff;
-	used[address&0xffff] = 1;
+	//used[address&0xffff] = 1;
 	used2[(address&0xff00)>>8] = 1;
 }
 
@@ -358,7 +367,7 @@ int main(int argc, char **argv)
 	Uint32 current_ticks, song_started_ticks;
 	unsigned char packed_mask[32];
 	
-	memset(used, 0, 65536);
+	//memset(used, 0, 65536);
 
 	parse_args(argc, argv);
 
@@ -436,11 +445,12 @@ reload:
 		if (cur_entry >= g_cfg_num_files) { cur_entry = 0; }
 	}
 	memset(memsurface_data, 0, 512*512*4);
-	memset(used, 0, sizeof(used));
+	//memset(used, 0, sizeof(used));
 	memset(used2, 0, sizeof(used2));
 	cur_mouse_address =0;
 	cur_time = 0;
 	audio_samples_written = 0;
+	last_pc = -1;
 
 	// draw one-time stuff
 	if (!g_cfg_novideo)
@@ -671,12 +681,12 @@ reload:
 				tmprect.x = 0;
 				tmprect.y = 0;
 				tmprect.w = screen->w;
-				tmprect.h = 32;
+				tmprect.h = 28;
 				SDL_FillRect(screen, &tmprect, color_screen_black);
 				
 				for (i=0; i<strlen(pub); i++)
 				{
-					int off = (int)((sin(angle)*8.0));
+					int off = (int)((sin(angle)*6.0));
 					angle+= (M_PI)/(float)strlen(pub);
 //					angle+=0.3;
 					c[0] = pub[i];
