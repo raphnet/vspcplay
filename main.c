@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.13 2005/06/06 22:26:13 raph Exp $ */
+/* $Id: main.c,v 1.14 2005/06/06 22:34:18 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -94,7 +94,7 @@ static unsigned char *memsurface_data=NULL;
 static unsigned char audiobuf[BUFFER_SIZE];
 static int audio_buf_bytes=0, spc_buf_size;
 
-Uint32 color_screen_white, color_screen_black, color_screen_cyan, color_screen_magenta, color_screen_yellow;
+Uint32 color_screen_white, color_screen_black, color_screen_cyan, color_screen_magenta, color_screen_yellow, color_screen_red;
 Uint32 color_screen_gray;
 Uint32 colorscale[12];
 
@@ -105,8 +105,6 @@ void report_memwrite(unsigned short address, unsigned char value);
 
 void report_memread3(unsigned short address, unsigned char value)
 {
-//	used[address&0xffff] = 1;
-//	memsurface_data[((address&0xffff)<<2)]=0xff;
 }
 
 void report_memread2(unsigned short address, unsigned char value)
@@ -158,41 +156,14 @@ void report_memwrite(unsigned short address, unsigned char value)
 	memsurface_data[idx+4]=0xff;
 	memsurface_data[idx+2048]=0xff;
 	memsurface_data[idx+4+2048]=0xff;
-	//used[address&0xffff] = 1;
-	//used2[(address&0xff)>>8] = 1;
 }
-/*
-void draw_arrays(int X, int Y)
-{
-	int x,y,i;
-	Uint32 color;
 
-	for (y=0; y<256; y++)
-	{
-		for (x=0; x<256; x++)
-		{
-			i = y*256+x;
-			if (used[i]) {
-				color = SDL_MapRGB(screen->format, 
-					 executed[i], 
-					 written_to[i], 
-					 read_from[i]);
-				put4pixel(screen, x*2+X, y*2+Y, color);
-			}
-			
-		}
-	}
-}
-*/
 void fade_arrays()
 {
 	int i;
 	for (i=0; i<512*512*4; i++)
 	{
 		if (memsurface_data[i] > 0x40) { memsurface_data[i]--; }
-	//	if (executed[i]>0x40) { executed[i]--; }
-	//	if (written_to[i]>0x40) { written_to[i]--; }
-	//	if (read_from[i]>0x40) { read_from[i]--; }
 	}
 }
 
@@ -461,6 +432,7 @@ int init_sdl()
 		color_screen_cyan = SDL_MapRGB(screen->format, 0x00, 0xff, 0xff);
 		color_screen_magenta = SDL_MapRGB(screen->format, 0xff, 0x00, 0xff);
 		color_screen_gray = SDL_MapRGB(screen->format, 0x7f, 0x7f, 0x7f);
+		color_screen_red = SDL_MapRGB(screen->format, 0xff, 0x00, 0x00);
 
 		colorscale[0] = SDL_MapRGB(screen->format, 0xff, 0x00, 0x00);
 		colorscale[1] = SDL_MapRGB(screen->format, 0xff, 0x7f, 0x00);
@@ -510,6 +482,7 @@ int main(int argc, char **argv)
 	Uint32 current_ticks, song_started_ticks;
 	unsigned char packed_mask[32];
 	Uint32 time_last=0, time_cur=0;
+	int hexdump_address=0x0000, hexdump_locked=0;
 	
 	//memset(used, 0, 65536);
 
@@ -699,6 +672,9 @@ reload:
 								x /= 2;
 								y /= 2;
 								cur_mouse_address = y*256+x;
+								if (!hexdump_locked) {
+									hexdump_address = cur_mouse_address;
+								}
 	//							printf("%d,%d: $%04X\n", x, y, y*256+x);
 							}
 							else
@@ -711,6 +687,15 @@ reload:
 						break;
 					case SDL_MOUSEBUTTONDOWN:						
 						{
+							// click in memory view. Toggle lock
+							if (	ev.motion.x >= MEMORY_VIEW_X && 
+									ev.motion.x < MEMORY_VIEW_X + 512 &&
+									ev.motion.y >= MEMORY_VIEW_Y &&
+									ev.motion.y < MEMORY_VIEW_Y + 512)
+							{
+								hexdump_locked = (!hexdump_locked);
+							}
+
 							/* porttool */
 							if (	(ev.button.x >= PORTTOOL_X + (8*5)) &&
 									ev.button.y >= PORTTOOL_Y)
@@ -998,20 +983,26 @@ reload:
 			tmp += 8*10 + 8;
 
 			sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp, "  - Mouseover Hexdump -", color_screen_white);
+			if (hexdump_locked) {
+				sdlfont_drawString(screen, MEMORY_VIEW_X+520+24*8, tmp, "locked", color_screen_red);
+			} else {
+				sdlfont_drawString(screen, MEMORY_VIEW_X+520+24*8, tmp, "      ", color_screen_red);
+			}
+			
 			tmp+=9;
 			if (cur_mouse_address>=0)
 			{
 		
 				for (i=0; i<128; i+=8)
 				{
-					unsigned char *st = &IAPU.RAM[cur_mouse_address+i];
+					unsigned char *st = &IAPU.RAM[hexdump_address+i];
 					int p = MEMORY_VIEW_X+520, j;
-					sprintf(tmpbuf, "%04X: ", cur_mouse_address+i);
+					sprintf(tmpbuf, "%04X: ", hexdump_address+i);
 					sdlfont_drawString(screen, p, tmp, tmpbuf, color_screen_white);
 					p += 6*8;
 					for (j=0; j<8; j++) {
-						int idx = ((cur_mouse_address+i+j)&0xff00)<<4;	
-						idx += ((cur_mouse_address+i+j) % 256)<<3;
+						int idx = ((hexdump_address+i+j)&0xff00)<<4;	
+						idx += ((hexdump_address+i+j) % 256)<<3;
 						Uint32 color = SDL_MapRGB(screen->format, 
 								0x7f + (memsurface_data[idx]>>1), 
 								0x7f + (memsurface_data[idx+1]>>1), 
