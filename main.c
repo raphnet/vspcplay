@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.10 2005/06/04 23:17:44 raph Exp $ */
+/* $Id: main.c,v 1.11 2005/06/06 01:03:45 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -74,12 +74,17 @@ static unsigned char used2[256];
 extern struct SAPU APU;
 extern struct SIAPU IAPU;
 
+static int g_cfg_ignoretagtime = 0;
+static int g_cfg_defaultsongtime = DEFAULT_SONGTIME;
+static int g_cfg_autowritemask = 0;
 static int g_cfg_nosound = 0;
 static int g_cfg_novideo = 0;
 static int g_cfg_update_in_callback = 0;
 static int g_cfg_num_files = 0;
 static char **g_cfg_playlist = NULL;
 static int g_paused = 0;
+static int g_cur_entry = 0;
+static char *g_real_filename=NULL; // holds the filename minus path
 
 SDL_Surface *screen=NULL;
 SDL_Surface *memsurface=NULL;
@@ -242,6 +247,9 @@ int parse_args(int argc, char **argv)
 		{"update_in_callback", 0, 0, 2},
 		{"echo", 0, 0, 3},
 		{"interpolation", 0, 0, 4},
+		{"savemask", 0, 0, 5},
+		{"default_time", 1, 0, 6},
+		{"ignore_tag_time", 0, 0, 7},
 		{"help", 0, 0, 'h'},
 		{0,0,0,0}
 	};
@@ -266,6 +274,15 @@ int parse_args(int argc, char **argv)
 			case 3:
 				spc_config.is_echo = 1;
 				break;
+			case 5:
+				g_cfg_autowritemask = 1;
+				break;
+			case 6:
+				g_cfg_defaultsongtime = atoi(optarg);
+				break;
+			case 7:
+				g_cfg_ignoretagtime = 1;
+				break;
 			case 'h':
 				printf("Usage: ./vspcplay [options] files...\n");
 				printf("\n");
@@ -277,6 +294,13 @@ int parse_args(int argc, char **argv)
 				printf("                        sdl audio callback\n");
 				printf(" --interpolation  Use sound interpolatoin\n");
 				printf(" --echo           Enable echo\n");
+				printf(" --auto_write_mask   Write mask file automatically when a\n");
+				printf("                     tune ends due to playtime from tag or\n");
+				printf("                     default play time.\n");
+				printf(" --default_time t    Set the default play time in seconds\n");
+				printf("                     for when there is not id666 tag. (default: %d\n", DEFAULT_SONGTIME);
+				printf(" --ignore_tag_time   Ignore the time from the id666 tag and\n");
+				printf("                     use default time\n");
 				exit(0);
 				break;
 		}
@@ -286,6 +310,53 @@ int parse_args(int argc, char **argv)
 	g_cfg_playlist = &argv[optind];
 	
 	return 0;
+}
+
+void write_mask(unsigned char packed_mask[32])
+{
+	FILE *msk_file;
+	char *sep;
+	char filename[1024];
+	int i;
+	strncpy(filename, g_cfg_playlist[g_cur_entry], 1024);
+#ifdef WIN32
+	sep = strrchr(filename, '\\');
+#else
+	sep = strrchr(filename, '/');
+#endif
+	// keep only the path
+	if (sep) { sep++; *sep = 0; } 
+	else { 
+		filename[0] = 0; 
+	}
+
+	// add the filename
+	strncat(filename, g_real_filename, 1024);
+
+	// but remove the extension if any
+	sep = strrchr(filename, '.');
+	if (sep) { *sep = 0; }
+
+	// and use the .msk extension
+	strncat(filename, ".msk", 1024);
+
+	msk_file = fopen(filename, "wb");
+	if (!msk_file) {
+		perror("fopen");
+	}
+	else
+	{
+		fwrite(packed_mask, 32, 1, msk_file);
+		fclose(msk_file);
+	}
+
+	printf("Writing mask to '%s'\n", filename);
+
+	for (i=0; i<32; i++) {
+		printf("%02X",packed_mask[i]);
+	}
+	printf("\n");
+	
 }
 
 int init_sdl()
@@ -360,9 +431,7 @@ int main(int argc, char **argv)
 	SDL_Rect tmprect;
 	SDL_Rect memrect;
 	char tmpbuf[30];
-	int cur_entry = 0;
 	id666_tag tag;
-	char *real_filename;
 	int song_time, cur_time; // in seconds
 	Uint32 current_ticks, song_started_ticks;
 	unsigned char packed_mask[32];
@@ -388,61 +457,66 @@ int main(int argc, char **argv)
 
 reload:
 #ifdef WIN32
-	real_filename = strrchr(g_cfg_playlist[cur_entry], '\\');
+	g_real_filename = strrchr(g_cfg_playlist[g_cur_entry], '\\');
 #else
-	real_filename = strrchr(g_cfg_playlist[cur_entry], '/');
+	g_real_filename = strrchr(g_cfg_playlist[g_cur_entry], '/');
 #endif
-	if (!real_filename) {
-		real_filename = g_cfg_playlist[cur_entry];
+	if (!g_real_filename) {
+		g_real_filename = g_cfg_playlist[g_cur_entry];
 	}
 	else {
 		// skip path sep
-		real_filename++;
+		g_real_filename++;
 	}	
 	
 	{
 		FILE *fptr;
-		fptr = fopen(g_cfg_playlist[cur_entry], "rb");
+		fptr = fopen(g_cfg_playlist[g_cur_entry], "rb");
 		if (fptr==NULL) {
 			printf("Failure\n");
-				if (cur_entry == g_cfg_num_files-1) {
+				if (g_cur_entry == g_cfg_num_files-1) {
 				g_cfg_num_files--;
 			}
 			else
 			{
-				memmove(&g_cfg_playlist[cur_entry], &g_cfg_playlist[cur_entry+1], g_cfg_num_files-cur_entry);
+				memmove(&g_cfg_playlist[g_cur_entry], &g_cfg_playlist[g_cur_entry+1], g_cfg_num_files-g_cur_entry);
 				g_cfg_num_files--;
-				cur_entry++;
+				g_cur_entry++;
 			}
 			if (g_cfg_num_files<=0) { goto clean; }
-			if (cur_entry >= g_cfg_num_files) { cur_entry = 0; }
+			if (g_cur_entry >= g_cfg_num_files) { g_cur_entry = 0; }
 			goto reload;
 		}
 		
 		read_id666(fptr, &tag); 
-	
-		song_time = atoi(tag.seconds_til_fadeout);
-		if (song_time <= 0) {
-			song_time = DEFAULT_SONGTIME;
+
+		if (!g_cfg_ignoretagtime) {
+			song_time = atoi(tag.seconds_til_fadeout);
+			if (song_time <= 0) {
+				song_time = g_cfg_defaultsongtime;
+			}
+		}
+		else {
+			song_time = g_cfg_defaultsongtime;
 		}
 		
 		fclose(fptr);
 	}
 	
-    if (!SPC_load(g_cfg_playlist[cur_entry])) 
+    if (!SPC_load(g_cfg_playlist[g_cur_entry])) 
 	{
 		printf("Failure\n");
-		if (cur_entry == g_cfg_num_files-1) {
+		if (g_cur_entry == g_cfg_num_files-1) {
 			g_cfg_num_files--;
 		}
 		else
 		{
-			memmove(&g_cfg_playlist[cur_entry], &g_cfg_playlist[cur_entry+1], g_cfg_num_files-cur_entry);
+			memmove(&g_cfg_playlist[g_cur_entry], &g_cfg_playlist[g_cur_entry+1], g_cfg_num_files-g_cur_entry);
 			g_cfg_num_files--;
-			cur_entry++;
+			g_cur_entry++;
 		}
 		if (g_cfg_num_files<=0) { goto clean; }
-		if (cur_entry >= g_cfg_num_files) { cur_entry = 0; }
+		if (g_cur_entry >= g_cfg_num_files) { g_cur_entry = 0; }
 	}
 	memset(memsurface_data, 0, 512*512*4);
 	//memset(used, 0, sizeof(used));
@@ -475,7 +549,7 @@ reload:
 
 		/* information */
 		sdlfont_drawString(screen, INFO_X, INFO_Y, "      - Info -", color_screen_white);
-		sprintf(tmpbuf, "Filename: %s", real_filename);
+		sprintf(tmpbuf, "Filename: %s", g_real_filename);
 		sdlfont_drawString(screen, INFO_X, INFO_Y+8, tmpbuf, color_screen_white);
 		sprintf(tmpbuf, "Title...: %s", tag.title);
 		sdlfont_drawString(screen, INFO_X, INFO_Y+16, tmpbuf, color_screen_white);
@@ -496,12 +570,19 @@ reload:
 	SDL_PauseAudio(0);
 	g_paused = 0;
     for (;;) 
-	{	
-		if (audio_samples_written/44100 >= song_time) {
-				SDL_PauseAudio(1);
-				cur_entry++;
-				if (cur_entry>=g_cfg_num_files) { goto clean; }
-				goto reload;
+	{
+		/* Check if it is time to change tune.
+		 */
+		if (audio_samples_written/44100 >= song_time) 
+		{
+			if (g_cfg_autowritemask) {
+				write_mask(packed_mask);
+			}
+			
+			SDL_PauseAudio(1);
+			g_cur_entry++;
+			if (g_cur_entry>=g_cfg_num_files) { goto clean; }
+			goto reload;
 		}
 		
 		SDL_Event ev;
@@ -598,24 +679,21 @@ reload:
 
 								if (x>=26 && x<=29) {  // prev
 									SDL_PauseAudio(1);
-									cur_entry--;
-									if (cur_entry<0) { cur_entry = g_cfg_num_files-1; }
+									g_cur_entry--;
+									if (g_cur_entry<0) { g_cur_entry = g_cfg_num_files-1; }
 									goto reload;
 
 								}
 
 								if (x>=33 && x<=36) { // next
 									SDL_PauseAudio(1);
-									cur_entry++;
-									if (cur_entry>=g_cfg_num_files) { cur_entry = 0; }
+									g_cur_entry++;
+									if (g_cur_entry>=g_cfg_num_files) { g_cur_entry = 0; }
 									goto reload;
 								}
 
 								if (x>=41 && x<=50) { // write mask
-									for (i=0; i<32; i++) {
-										printf("%02X",packed_mask[i]);
-									}
-									printf("\n");
+									write_mask(packed_mask);
 								}
 							}
 						}
@@ -668,7 +746,7 @@ reload:
 				int i;
 				static float start_angle;
 				float angle;
-				static float angle2,angle3;
+				static float angle2;
 				char *pub = "vspcplay by Raphael Assenat. http://vspcplay.raphnet.net";
 				char c[2] = { 0, 0 };	
 				static int cs;
@@ -688,13 +766,11 @@ reload:
 				{
 					int off = (int)((sin(angle)*6.0));
 					angle+= (M_PI)/(float)strlen(pub);
-//					angle+=0.3;
 					c[0] = pub[i];
 					sdlfont_drawString(screen, tmprect.x + i*8, 12+off, c, colorscale[cs]);
 				}
 
 				angle2 += 0.1;
-				//start_angle += 0.3;
 				start_angle += 0.2;
 			}
 			
