@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.11 2005/06/06 01:03:45 raph Exp $ */
+/* $Id: main.c,v 1.12 2005/06/06 16:47:43 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -59,6 +59,7 @@ static int last_pc=-1;
 #define DEFAULT_SONGTIME	(60*5) 
 
 #define PROG_NAME_VERSION_STRING "vspcplay v1.0"
+#define CREDITS "vspcplay v1.0 by Raphael Assenat (http://vspcplay.raphnet.net). APU emulation code taken from snes9x."
 
 SPC_Config spc_config = {
     44100,
@@ -359,6 +360,67 @@ void write_mask(unsigned char packed_mask[32])
 	
 }
 
+static char now_playing[1024];
+static char *marquees[3] = { CREDITS, now_playing, NULL };
+static char *cur_marquee = NULL;
+static int cur_marquee_id = 0;
+
+void do_scroller(void)
+{
+	int i;
+	char c[2] = { 0, 0 };	
+	static int cs;
+	static int p = 0;
+	static int cur_len;
+	static int cur_min;
+	SDL_Rect tmprect;
+	static float start_angle = 0.0;
+	float angle;
+	int off;
+
+	if (cur_marquee == NULL) { 
+		cur_marquee = marquees[cur_marquee_id]; 
+		cur_len = strlen(cur_marquee);
+		cur_min = -cur_len*8;
+		p = screen->w;
+	}
+	
+	angle = start_angle;
+				
+	cs = audio_samples_written/44100;
+	cs %= 12;
+
+	// clear area	
+	tmprect.x = 0;
+	tmprect.y = 0;
+	tmprect.w = screen->w;
+	tmprect.h = 28;
+	SDL_FillRect(screen, &tmprect, color_screen_black);
+	
+	
+	for (i=0; i<cur_len; i++)
+	{
+		off = sin(angle)*8.0;
+		c[0] = cur_marquee[i];
+		if (	(tmprect.x + i*8 + p > 0) && (tmprect.x + i*8 + p < screen->w) )
+		{
+			sdlfont_drawString(screen, tmprect.x + i*8 + p, 12 + off, c, colorscale[cs]);
+		}
+		angle-=0.1;
+	}
+	start_angle += 0.06;
+	p--;				
+
+	if (p<cur_min) {
+		if (marquees[cur_marquee_id+1]!=NULL) {
+			cur_marquee = marquees[++cur_marquee_id];
+		}
+		else {
+			p = screen->w;
+		}
+	}
+}
+
 int init_sdl()
 {
 	SDL_AudioSpec desired;
@@ -498,6 +560,17 @@ reload:
 		}
 		else {
 			song_time = g_cfg_defaultsongtime;
+		}
+
+		now_playing[0] = 0;
+		if (tag.title)
+		{
+			if (strlen(tag.title)) {
+				sprintf(now_playing, "Now playing: %s (%s), dumped by %s\n", tag.title, tag.game_title, tag.name_of_dumper);
+			}		
+		}
+		if (strlen(now_playing)==0) {
+			sprintf(now_playing, "Now playing: %s\n", g_cfg_playlist[g_cur_entry]);
 		}
 		
 		fclose(fptr);
@@ -741,20 +814,26 @@ reload:
 		
 		if (!g_cfg_novideo)
 		{
-
+			do_scroller();
+/*
 			{
 				int i;
-				static float start_angle;
-				float angle;
-				static float angle2;
 				char *pub = "vspcplay by Raphael Assenat. http://vspcplay.raphnet.net";
 				char c[2] = { 0, 0 };	
 				static int cs;
+				static int p = 0;
+				static int first = 1;
+				static int mov = 1;
+				int len;
+				int min;
+
+				if (first) { p = screen->w; first = 0; }
 				
+				len = strlen(pub);
+							
 				cs = audio_samples_written/44100;
 				cs %= 12;
 
-				angle = start_angle;
 				
 				tmprect.x = 0;
 				tmprect.y = 0;
@@ -762,17 +841,19 @@ reload:
 				tmprect.h = 28;
 				SDL_FillRect(screen, &tmprect, color_screen_black);
 				
-				for (i=0; i<strlen(pub); i++)
+				
+				for (i=0; i<len; i++)
 				{
-					int off = (int)((sin(angle)*6.0));
-					angle+= (M_PI)/(float)strlen(pub);
 					c[0] = pub[i];
-					sdlfont_drawString(screen, tmprect.x + i*8, 12+off, c, colorscale[cs]);
+					if (	(tmprect.x + i*8 + p > 0) && (tmprect.x + i*8 + p < screen->w) )
+					{
+						sdlfont_drawString(screen, tmprect.x + i*8 + p, 12, c, colorscale[cs]);
+					}
 				}
 
-				angle2 += 0.1;
-				start_angle += 0.2;
+				p--;				
 			}
+*/		
 			
 			fade_arrays();			
 			memrect.x = MEMORY_VIEW_X; memrect.y = MEMORY_VIEW_Y;
