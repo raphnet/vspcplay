@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.12 2005/06/06 16:47:43 raph Exp $ */
+/* $Id: main.c,v 1.13 2005/06/06 22:26:13 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -365,7 +365,7 @@ static char *marquees[3] = { CREDITS, now_playing, NULL };
 static char *cur_marquee = NULL;
 static int cur_marquee_id = 0;
 
-void do_scroller(void)
+void do_scroller(int elaps_milli)
 {
 	int i;
 	char c[2] = { 0, 0 };	
@@ -377,6 +377,18 @@ void do_scroller(void)
 	static float start_angle = 0.0;
 	float angle;
 	int off;
+	int steps;
+	static int keep=0;
+
+	keep += elaps_milli;	
+//	printf("%d %d\n", keep, elaps_milli);
+//	return;
+	
+	steps = keep*60/1000;
+	if (!steps) { return; }
+
+	elaps_milli = keep;
+	keep=0;
 
 	if (cur_marquee == NULL) { 
 		cur_marquee = marquees[cur_marquee_id]; 
@@ -408,8 +420,8 @@ void do_scroller(void)
 		}
 		angle-=0.1;
 	}
-	start_angle += 0.06;
-	p--;				
+	start_angle += steps * 0.02;
+	p-=steps;
 
 	if (p<cur_min) {
 		if (marquees[cur_marquee_id+1]!=NULL) {
@@ -497,9 +509,12 @@ int main(int argc, char **argv)
 	int song_time, cur_time; // in seconds
 	Uint32 current_ticks, song_started_ticks;
 	unsigned char packed_mask[32];
+	Uint32 time_last=0, time_cur=0;
 	
 	//memset(used, 0, 65536);
 
+	
+	
 	parse_args(argc, argv);
 
 	if (g_cfg_num_files < 1) {
@@ -513,6 +528,7 @@ int main(int argc, char **argv)
 
 	
 	init_sdl();
+	time_cur = time_last = SDL_GetTicks();
 
 	memsurface_data = malloc(512*512*4);
 	memset(memsurface_data, 0, 512*512*4);
@@ -814,7 +830,8 @@ reload:
 		
 		if (!g_cfg_novideo)
 		{
-			do_scroller();
+			time_cur = SDL_GetTicks();
+			do_scroller(time_cur - time_last);
 /*
 			{
 				int i;
@@ -1030,6 +1047,7 @@ reload:
 
 			
 			SDL_UpdateRect(screen, 0, 0, 0, 0);
+			time_last = time_cur;
 		} // if !g_cfg_novideo
 
 	}
