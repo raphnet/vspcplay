@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.14 2005/06/06 22:34:18 raph Exp $ */
+/* $Id: main.c,v 1.15 2005/06/07 01:07:18 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -25,14 +25,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/ioctl.h>
+//#include <sys/ioctl.h>
 //#include <sys/soundcard.h>
+#ifndef WIN32
 #include <getopt.h>
-#include <unistd.h>
+#endif
+//#include <unistd.h>
 #include <sys/types.h>
 #include <fcntl.h>
 #include <math.h>
-#include "getopt.h"
+//#include "getopt.h"
 #include "libspc.h"
 #include "id666.h"
 
@@ -188,12 +190,12 @@ void my_audio_callback(void *userdata, Uint8 *stream, int len)
 	}
 	else
 	{
-		SDL_LockAudio();
+		//SDL_LockAudio();
 
 		if (audio_buf_bytes<len) {
 			printf("Underrun\n");
 			memset(stream, 0, len);
-			SDL_UnlockAudio();
+		//	SDL_UnlockAudio();
 			return;
 		}
 
@@ -205,13 +207,14 @@ void my_audio_callback(void *userdata, Uint8 *stream, int len)
 	//		printf("%02X ", stream[i]);
 	//	}
 	//	printf("\n");
-		SDL_UnlockAudio();
+		//SDL_UnlockAudio();
 	}
 	audio_samples_written += len/4; // 16bit stereo
 }
 
 int parse_args(int argc, char **argv)
 {
+#ifndef WIN32
 	int res;
 	static struct option long_options[] = {
 		{"nosound", 0, 0, 0},
@@ -225,6 +228,7 @@ int parse_args(int argc, char **argv)
 		{"help", 0, 0, 'h'},
 		{0,0,0,0}
 	};
+
 
 	while ((res=getopt_long(argc, argv, "h",
 				long_options, NULL))!=-1)
@@ -278,9 +282,15 @@ int parse_args(int argc, char **argv)
 		}
 	}
 
+
 	g_cfg_num_files = argc-optind;
 	g_cfg_playlist = &argv[optind];
-	
+#endif
+	g_cfg_playlist = &argv[1];
+	g_cfg_num_files = argc-1;
+
+	//g_cfg_num_files = 1;
+	//g_cfg_playlist[0] = "dkc-08.spc";
 	return 0;
 }
 
@@ -453,8 +463,8 @@ int init_sdl()
 		desired.freq = 44100;
 		desired.format = AUDIO_S16SYS;
 		desired.channels = 2;
-		desired.samples = 1024;
-		//desired.samples = 4096;
+		//desired.samples = 1024;
+		desired.samples = 4096;
 		desired.callback = my_audio_callback;
 		desired.userdata = NULL;
 		if ( SDL_OpenAudio(&desired, NULL) < 0 ){
@@ -487,7 +497,7 @@ int main(int argc, char **argv)
 	//memset(used, 0, 65536);
 
 	
-	
+	printf("Hello\n");
 	parse_args(argc, argv);
 
 	if (g_cfg_num_files < 1) {
@@ -524,7 +534,7 @@ reload:
 		FILE *fptr;
 		fptr = fopen(g_cfg_playlist[g_cur_entry], "rb");
 		if (fptr==NULL) {
-			printf("Failure\n");
+			printf("Failed to open %s\n", g_cfg_playlist[g_cur_entry]);
 				if (g_cur_entry == g_cfg_num_files-1) {
 				g_cfg_num_files--;
 			}
@@ -629,10 +639,14 @@ reload:
 
 	song_started_ticks = 0;
 
-	SDL_PauseAudio(0);
+	if (!g_cfg_nosound) {
+		SDL_PauseAudio(0);
+	}
 	g_paused = 0;
     for (;;) 
 	{
+		SDL_Event ev;
+
 		/* Check if it is time to change tune.
 		 */
 		if (audio_samples_written/44100 >= song_time) 
@@ -640,23 +654,28 @@ reload:
 			if (g_cfg_autowritemask) {
 				write_mask(packed_mask);
 			}
-			
-			SDL_PauseAudio(1);
+			if (!g_cfg_nosound) {
+				SDL_PauseAudio(1);
+			}
 			g_cur_entry++;
 			if (g_cur_entry>=g_cfg_num_files) { goto clean; }
 			goto reload;
 		}
 		
-		SDL_Event ev;
+		
+printf("tick2\n");
 		
 		if (!g_cfg_novideo)
 		{
+			//if (0))
 			while (SDL_PollEvent(&ev))
 			{
 				switch (ev.type)
 				{
 					case SDL_QUIT:
-						SDL_PauseAudio(1);
+						if (!g_cfg_nosound) {
+							SDL_PauseAudio(1);
+						}
 						goto clean;
 						break;
 					case SDL_MOUSEMOTION:
@@ -774,45 +793,49 @@ reload:
 						break;
 				}
 			} // while (pollevent)
+			
 		} // !g_cfg_novideo
 
-		if (g_cfg_nosound) {
+		if (g_cfg_nosound) {			
 			SPC_update(&audiobuf[audio_buf_bytes]);			
 			audio_samples_written += spc_buf_size/4; // 16bit stereo
 		}
 		else
 		{	
-			
+			printf("tick3\n");
 			if (!g_cfg_update_in_callback && !g_paused)
 			{
 				// fill the buffer when possible
 				updates = 0;
 			
-				if (BUFFER_SIZE - audio_buf_bytes >= spc_buf_size )
+				while (BUFFER_SIZE - audio_buf_bytes >= spc_buf_size )
 				{
 					if (!g_cfg_novideo) {
 						if (SDL_MUSTLOCK(memsurface)) {
 							SDL_LockSurface(memsurface);
 						}
 					}
-					while (BUFFER_SIZE - audio_buf_bytes >= spc_buf_size) {
-						SDL_LockAudio();
-						SPC_update(&audiobuf[audio_buf_bytes]);
+					while (BUFFER_SIZE - audio_buf_bytes >= spc_buf_size) {						
+						SDL_LockAudio();						
+						SPC_update(&audiobuf[audio_buf_bytes]);						
 						SDL_UnlockAudio();
-
+printf("tick5 %d\n", audio_buf_bytes);
 						audio_buf_bytes += spc_buf_size;
 					}
+					
 					if (!g_cfg_novideo) {
 						if (SDL_MUSTLOCK(memsurface)) {
 							SDL_UnlockSurface(memsurface);
 						}
-					}
+					}					
 				}
 			}
 
 		}
+printf("tick4\n");
 
-		
+//return 0; // not reached		
+
 		if (!g_cfg_novideo)
 		{
 			time_cur = SDL_GetTicks();
@@ -884,6 +907,7 @@ reload:
 			sprintf(tmpbuf, "Blocks used: %3d/256 (%.1f%%)  ", tmp, (float)tmp*100.0/256.0);
 			sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y + memsurface->h + 2, tmpbuf, color_screen_white);
 
+			if (1)
 			{
 				memset(packed_mask, 0, 32);
 				for (i=0; i<256; i++)
@@ -891,12 +915,17 @@ reload:
 					if (used2[i])
 					packed_mask[i/8] |=	128 >> (i%8);
 				}
+#ifdef WIN32
+				sprintf(tmpbuf, "nope");
+#else
 				for (i=0; i<32; i++) {
-					sprintf(tmpbuf+(i*2), "%02X",packed_mask[i]);
+					//sprintf(&tmpbuf[(i*2)], "%02X",packed_mask[i]);
 				}
+#endif
 				sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y + memsurface->h + 2 + 9, tmpbuf, color_screen_white);
 			}
-			
+			i = 32;
+
 			// write the address under mouse cursor
 			if (cur_mouse_address >=0)
 			{
@@ -1002,8 +1031,10 @@ reload:
 					p += 6*8;
 					for (j=0; j<8; j++) {
 						int idx = ((hexdump_address+i+j)&0xff00)<<4;	
+						Uint32 color;
+
 						idx += ((hexdump_address+i+j) % 256)<<3;
-						Uint32 color = SDL_MapRGB(screen->format, 
+						color = SDL_MapRGB(screen->format, 
 								0x7f + (memsurface_data[idx]>>1), 
 								0x7f + (memsurface_data[idx+1]>>1), 
 								0x7f + (memsurface_data[idx+2]>>1)
@@ -1037,10 +1068,11 @@ reload:
 			sdlfont_drawString(screen, INFO_X, INFO_Y+48, tmpbuf, color_screen_white);
 
 			
+			
 			SDL_UpdateRect(screen, 0, 0, 0, 0);
 			time_last = time_cur;
 		} // if !g_cfg_novideo
-
+printf("tick1\n");
 	}
 clean:
 	SDL_Quit();
