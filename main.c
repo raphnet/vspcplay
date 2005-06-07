@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.15 2005/06/07 01:07:18 raph Exp $ */
+/* $Id: main.c,v 1.16 2005/06/07 01:09:09 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -463,8 +463,8 @@ int init_sdl()
 		desired.freq = 44100;
 		desired.format = AUDIO_S16SYS;
 		desired.channels = 2;
-		//desired.samples = 1024;
-		desired.samples = 4096;
+		desired.samples = 1024;
+		//desired.samples = 4096;
 		desired.callback = my_audio_callback;
 		desired.userdata = NULL;
 		if ( SDL_OpenAudio(&desired, NULL) < 0 ){
