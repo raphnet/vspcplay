@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.16 2005/06/07 01:09:09 raph Exp $ */
+/* $Id: main.c,v 1.17 2005/06/07 01:11:24 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -496,8 +496,6 @@ int main(int argc, char **argv)
 	
 	//memset(used, 0, 65536);
 
-	
-	printf("Hello\n");
 	parse_args(argc, argv);
 
 	if (g_cfg_num_files < 1) {
@@ -663,8 +661,6 @@ reload:
 		}
 		
 		
-printf("tick2\n");
-		
 		if (!g_cfg_novideo)
 		{
 			//if (0))
@@ -802,7 +798,6 @@ printf("tick2\n");
 		}
 		else
 		{	
-			printf("tick3\n");
 			if (!g_cfg_update_in_callback && !g_paused)
 			{
 				// fill the buffer when possible
@@ -819,7 +814,6 @@ printf("tick2\n");
 						SDL_LockAudio();						
 						SPC_update(&audiobuf[audio_buf_bytes]);						
 						SDL_UnlockAudio();
-printf("tick5 %d\n", audio_buf_bytes);
 						audio_buf_bytes += spc_buf_size;
 					}
 					
@@ -832,7 +826,6 @@ printf("tick5 %d\n", audio_buf_bytes);
 			}
 
 		}
-printf("tick4\n");
 
 //return 0; // not reached		
 
@@ -1072,7 +1065,6 @@ printf("tick4\n");
 			SDL_UpdateRect(screen, 0, 0, 0, 0);
 			time_last = time_cur;
 		} // if !g_cfg_novideo
-printf("tick1\n");
 	}
 clean:
 	SDL_Quit();
