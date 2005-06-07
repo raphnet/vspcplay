@@ -44,10 +44,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef _WIN32
-#include "..\Snes9X.h"
-#include "..\zlib\zlib.h"
-#endif
+//#ifdef _WIN32
+//#include "..\Snes9X.h"
+//#include "..\zlib\zlib.h"
+//#endif
 
 #include "port.h"
 /* #include "65c816.h" */

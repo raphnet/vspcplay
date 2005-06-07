@@ -98,7 +98,7 @@ typedef __int64 int64;
 #define END_EXTERN_C
 #endif
 #endif
-
+#define ZeroMemory(a,b) memset((a),0,(b))
 #ifndef _WIN32
 
 #ifndef PATH_MAX
@@ -111,7 +111,7 @@ typedef __int64 int64;
 #define _MAX_EXT PATH_MAX
 #define _MAX_PATH PATH_MAX
 
-#define ZeroMemory(a,b) memset((a),0,(b))
+
 
 void _makepath (char *path, const char *drive, const char *dir,
 		const char *fname, const char *ext);
@@ -147,12 +147,14 @@ typedef void (*SignalHandler)(int);
 #endif
 
 #if defined(__i386__) || defined(__i486__) || defined(__i586__) || \
-    defined(__WIN32) || defined(__alpha__) || defined(__x86_64__)
+    defined(__WIN32) || defined(__alpha__) || defined(__x86_64__) || defined(WIN32)
 #define LSB_FIRST
 #define FAST_LSB_WORD_ACCESS
 #else
 #define MSB_FIRST
 #endif
+
+
 
 #ifdef __sun
 #define TITLE "Snes9X: Solaris"
