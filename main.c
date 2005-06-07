@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.17 2005/06/07 01:11:24 raph Exp $ */
+/* $Id: main.c,v 1.18 2005/06/07 12:49:19 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -285,9 +285,10 @@ int parse_args(int argc, char **argv)
 
 	g_cfg_num_files = argc-optind;
 	g_cfg_playlist = &argv[optind];
-#endif
+#else
 	g_cfg_playlist = &argv[1];
 	g_cfg_num_files = argc-1;
+#endif
 
 	//g_cfg_num_files = 1;
 	//g_cfg_playlist[0] = "dkc-08.spc";
