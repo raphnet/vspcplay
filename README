@@ -4,9 +4,14 @@ I used the code from the spc-xmms plugin, which uses the snes9x APU emulation
 code. I updated the snes9x code using a newer version of snes9x (I dont remember
 which version exactly).
 
-The display code is mine.
+The display code is mine. 
+*** WARNING WARNING WARNING!
+I coded this really fast and added feature after feature without any planning and minimal
+thinking. The code is really *really* ugly.
 
 The homepage for this project is http://vspcplay.raphnet.net
 
-Regards,
+You may contact me at raph@raphnet.net
+
+Have fun,
 Raphael Assenat
