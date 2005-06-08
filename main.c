@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.18 2005/06/07 12:49:19 raph Exp $ */
+/* $Id: main.c,v 1.19 2005/06/08 13:46:29 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -374,11 +374,12 @@ void do_scroller(int elaps_milli)
 
 	if (cur_marquee == NULL) { 
 		cur_marquee = marquees[cur_marquee_id]; 
-		cur_len = strlen(cur_marquee);
-		cur_min = -cur_len*8;
 		p = screen->w;
 	}
 	
+	cur_len = strlen(cur_marquee);
+	cur_min = -cur_len*8;
+
 	angle = start_angle;
 				
 	cs = audio_samples_written/44100;
@@ -630,7 +631,22 @@ reload:
 		sdlfont_drawString(screen, INFO_X, INFO_Y+32, tmpbuf, color_screen_white);
 		sprintf(tmpbuf, "Comment.: %s", tag.comments);
 		sdlfont_drawString(screen, INFO_X, INFO_Y+40, tmpbuf, color_screen_white);
-			
+		
+		sprintf(tmpbuf, "Echo....: %s", spc_config.is_echo ? "On" : "Off");	
+		sdlfont_drawString(screen, INFO_X, INFO_Y+56, tmpbuf, color_screen_white);
+
+		sprintf(tmpbuf, "Interp. : %s", spc_config.is_interpolation ? "On" : "Off");	
+		sdlfont_drawString(screen, INFO_X, INFO_Y+64, tmpbuf, color_screen_white);
+	
+		sprintf(tmpbuf, "Autowrite mask.: %s", g_cfg_autowritemask ? "Yes" : "No");
+		sdlfont_drawString(screen, INFO_X, INFO_Y+72, tmpbuf, color_screen_white);
+
+		sprintf(tmpbuf, "Ignore tag time: %s", g_cfg_ignoretagtime ? "Yes" : "No");
+		sdlfont_drawString(screen, INFO_X, INFO_Y+80, tmpbuf, color_screen_white);
+
+		sprintf(tmpbuf, "Default time...: %d", g_cfg_defaultsongtime);
+		sdlfont_drawString(screen, INFO_X, INFO_Y+88, tmpbuf, color_screen_white);
+
 		
 		sdlfont_drawString(screen, PORTTOOL_X, PORTTOOL_Y, "     - Port tool -", color_screen_white);
 	}
@@ -834,49 +850,9 @@ reload:
 		{
 			time_cur = SDL_GetTicks();
 			do_scroller(time_cur - time_last);
-/*
-			{
-				int i;
-				char *pub = "vspcplay by Raphael Assenat. http://vspcplay.raphnet.net";
-				char c[2] = { 0, 0 };	
-				static int cs;
-				static int p = 0;
-				static int first = 1;
-				static int mov = 1;
-				int len;
-				int min;
-
-				if (first) { p = screen->w; first = 0; }
-				
-				len = strlen(pub);
-							
-				cs = audio_samples_written/44100;
-				cs %= 12;
-
-				
-				tmprect.x = 0;
-				tmprect.y = 0;
-				tmprect.w = screen->w;
-				tmprect.h = 28;
-				SDL_FillRect(screen, &tmprect, color_screen_black);
-				
-				
-				for (i=0; i<len; i++)
-				{
-					c[0] = pub[i];
-					if (	(tmprect.x + i*8 + p > 0) && (tmprect.x + i*8 + p < screen->w) )
-					{
-						sdlfont_drawString(screen, tmprect.x + i*8 + p, 12, c, colorscale[cs]);
-					}
-				}
-
-				p--;				
-			}
-*/		
 			
 			fade_arrays();			
 			memrect.x = MEMORY_VIEW_X; memrect.y = MEMORY_VIEW_Y;
-	//		SDL_LockAudio();
 			
 			// draw the memory read/write display area
 			SDL_BlitSurface(memsurface, NULL, screen, &memrect);	
@@ -895,9 +871,6 @@ reload:
 				}
 			}
 			
-	//		SDL_UnlockAudio();
-
-			
 			sprintf(tmpbuf, "Blocks used: %3d/256 (%.1f%%)  ", tmp, (float)tmp*100.0/256.0);
 			sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y + memsurface->h + 2, tmpbuf, color_screen_white);
 
@@ -912,9 +885,18 @@ reload:
 #ifdef WIN32
 				sprintf(tmpbuf, "nope");
 #else
-				for (i=0; i<32; i++) {
-					//sprintf(&tmpbuf[(i*2)], "%02X",packed_mask[i]);
-				}
+				sprintf(tmpbuf, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+						packed_mask[0], packed_mask[1], packed_mask[2], packed_mask[3],
+						packed_mask[4], packed_mask[5], packed_mask[6], packed_mask[7],
+						packed_mask[8], packed_mask[9], packed_mask[10], packed_mask[11],
+						packed_mask[12], packed_mask[13], packed_mask[14], packed_mask[15],
+						packed_mask[16], packed_mask[17], packed_mask[18], packed_mask[19],
+						packed_mask[20], packed_mask[21], packed_mask[22], packed_mask[23],
+						packed_mask[24], packed_mask[25], packed_mask[26], packed_mask[27],
+						packed_mask[28], packed_mask[29], packed_mask[30], packed_mask[31]);
+//				for (i=0; i<32; i++) {
+//					sprintf(&tmpbuf[(i*2)], "%02X",packed_mask[i]);
+//				}
 #endif
 				sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y + memsurface->h + 2 + 9, tmpbuf, color_screen_white);
 			}
@@ -924,11 +906,11 @@ reload:
 			if (cur_mouse_address >=0)
 			{
 				sprintf(tmpbuf, "Addr mouse: $%04X", cur_mouse_address);
-				sdlfont_drawString(screen, MEMORY_VIEW_X+8*(13+9), MEMORY_VIEW_Y-10, tmpbuf, color_screen_white);
+				sdlfont_drawString(screen, MEMORY_VIEW_X+8*(23), MEMORY_VIEW_Y-10, tmpbuf, color_screen_white);
 			}
 
 			// write the program counter
-			sprintf(tmpbuf, "PC: $%04x", last_pc);
+			sprintf(tmpbuf, "PC: $%04x  ", last_pc);
 			sdlfont_drawString(screen, MEMORY_VIEW_X+8*12, MEMORY_VIEW_Y-10, tmpbuf, color_screen_white);
 
 			tmp = i+10; // y 
