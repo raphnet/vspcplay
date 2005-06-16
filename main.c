@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.19 2005/06/08 13:46:29 raph Exp $ */
+/* $Id: main.c,v 1.20 2005/06/16 00:17:42 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -60,8 +60,8 @@ static int last_pc=-1;
 // 5 minutes default
 #define DEFAULT_SONGTIME	(60*5) 
 
-#define PROG_NAME_VERSION_STRING "vspcplay v1.0"
-#define CREDITS "vspcplay v1.0 by Raphael Assenat (http://vspcplay.raphnet.net). APU emulation code taken from snes9x."
+#define PROG_NAME_VERSION_STRING "vspcplay v1.1"
+#define CREDITS "vspcplay v1.1 by Raphael Assenat (http://vspcplay.raphnet.net). APU emulation code from snes9x."
 
 SPC_Config spc_config = {
     44100,
@@ -77,6 +77,7 @@ static unsigned char used2[256];
 extern struct SAPU APU;
 extern struct SIAPU IAPU;
 
+static int g_cfg_extratime = 0;
 static int g_cfg_ignoretagtime = 0;
 static int g_cfg_defaultsongtime = DEFAULT_SONGTIME;
 static int g_cfg_autowritemask = 0;
@@ -203,18 +204,12 @@ void my_audio_callback(void *userdata, Uint8 *stream, int len)
 		memmove(audiobuf, &audiobuf[len], audio_buf_bytes - len);
 		audio_buf_bytes -= len;
 		
-	//	for (i=0; i<100; i++) {
-	//		printf("%02X ", stream[i]);
-	//	}
-	//	printf("\n");
-		//SDL_UnlockAudio();
 	}
 	audio_samples_written += len/4; // 16bit stereo
 }
 
 int parse_args(int argc, char **argv)
 {
-#ifndef WIN32
 	int res;
 	static struct option long_options[] = {
 		{"nosound", 0, 0, 0},
@@ -225,6 +220,7 @@ int parse_args(int argc, char **argv)
 		{"savemask", 0, 0, 5},
 		{"default_time", 1, 0, 6},
 		{"ignore_tag_time", 0, 0, 7},
+		{"extra_time", 1, 0, 8},
 		{"help", 0, 0, 'h'},
 		{0,0,0,0}
 	};
@@ -259,6 +255,9 @@ int parse_args(int argc, char **argv)
 			case 7:
 				g_cfg_ignoretagtime = 1;
 				break;
+			case 8:
+				g_cfg_extratime = atoi(optarg);
+				break;
 			case 'h':
 				printf("Usage: ./vspcplay [options] files...\n");
 				printf("\n");
@@ -277,6 +276,9 @@ int parse_args(int argc, char **argv)
 				printf("                     for when there is not id666 tag. (default: %d\n", DEFAULT_SONGTIME);
 				printf(" --ignore_tag_time   Ignore the time from the id666 tag and\n");
 				printf("                     use default time\n");
+				printf(" --extra_time t      Set the number of extra seconds to play (relative to");
+				printf("                     the tag time or default time).\n");
+				
 				exit(0);
 				break;
 		}
@@ -285,13 +287,7 @@ int parse_args(int argc, char **argv)
 
 	g_cfg_num_files = argc-optind;
 	g_cfg_playlist = &argv[optind];
-#else
-	g_cfg_playlist = &argv[1];
-	g_cfg_num_files = argc-1;
-#endif
 
-	//g_cfg_num_files = 1;
-	//g_cfg_playlist[0] = "dkc-08.spc";
 	return 0;
 }
 
@@ -551,6 +547,7 @@ reload:
 		
 		read_id666(fptr, &tag); 
 
+		/* decide how much time the song will play */
 		if (!g_cfg_ignoretagtime) {
 			song_time = atoi(tag.seconds_til_fadeout);
 			if (song_time <= 0) {
@@ -560,6 +557,8 @@ reload:
 		else {
 			song_time = g_cfg_defaultsongtime;
 		}
+
+		song_time += g_cfg_extratime;
 
 		now_playing[0] = 0;
 		if (tag.title)
@@ -882,9 +881,6 @@ reload:
 					if (used2[i])
 					packed_mask[i/8] |=	128 >> (i%8);
 				}
-#ifdef WIN32
-				sprintf(tmpbuf, "nope");
-#else
 				sprintf(tmpbuf, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
 						packed_mask[0], packed_mask[1], packed_mask[2], packed_mask[3],
 						packed_mask[4], packed_mask[5], packed_mask[6], packed_mask[7],
@@ -894,10 +890,7 @@ reload:
 						packed_mask[20], packed_mask[21], packed_mask[22], packed_mask[23],
 						packed_mask[24], packed_mask[25], packed_mask[26], packed_mask[27],
 						packed_mask[28], packed_mask[29], packed_mask[30], packed_mask[31]);
-//				for (i=0; i<32; i++) {
-//					sprintf(&tmpbuf[(i*2)], "%02X",packed_mask[i]);
-//				}
-#endif
+
 				sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y + memsurface->h + 2 + 9, tmpbuf, color_screen_white);
 			}
 			i = 32;
