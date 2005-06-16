@@ -13,7 +13,7 @@ OBJS = apu.o globals.o libspc.o soundux.o spc700.o main.o font.o sdlfont.o id666
 all: $(PROG)
 
 $(PROG): $(OBJS)
-	$(LD) $(LDFLAGS) $(OBJS) -o $(PROG)
+	$(LD) $(OBJS) -o $(PROG) $(LDFLAGS) 
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $<
