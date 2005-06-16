@@ -773,9 +773,9 @@ void S9xFixEnvelope (int channel, uint8 gain, uint8 adsr1, uint8 adsr2)
 			int attack = AttackRate [adsr1 & 0xf];
 			
 			if (attack == 1 && (!Settings.SoundSync
-#ifdef __WIN32__
-                || Settings.SoundDriver != WIN_SNES9X_DIRECT_SOUND_DRIVER
-#endif
+//#ifdef __WIN32__
+                //|| Settings.SoundDriver != WIN_SNES9X_DIRECT_SOUND_DRIVER
+//#endif
                 ))
 				attack = 0;
 			

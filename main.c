@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.20 2005/06/16 00:17:42 raph Exp $ */
+/* $Id: main.c,v 1.21 2005/06/16 16:21:10 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -25,16 +25,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-//#include <sys/ioctl.h>
-//#include <sys/soundcard.h>
-#ifndef WIN32
 #include <getopt.h>
-#endif
-//#include <unistd.h>
 #include <sys/types.h>
 #include <fcntl.h>
 #include <math.h>
-//#include "getopt.h"
 #include "libspc.h"
 #include "id666.h"
 
@@ -42,8 +36,6 @@
 #include "SDL.h"
 
 #include "sdlfont.h"
-
-//static int is_verbose;
 
 static int last_pc=-1;
 
