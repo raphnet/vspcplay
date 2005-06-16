@@ -130,13 +130,8 @@
 #include "apu.h"
 #include "memmap.h"
 //#include "cpuexec.h"
-#ifdef __cplusplus
-extern "C" {
-	void report_memread(unsigned short address, unsigned char value);
-	void report_memwrite(unsigned short address, unsigned char value);
-}
-#endif
 
+#include "report.h"
 
 extern int Echo [24000];
 extern int DummyEchoBuffer [SOUND_BUFFER_SIZE];
@@ -525,7 +520,7 @@ void AltDecodeBlock (Channel *ch)
 	{
 		int i;
 		for (i=0; i<9; i++) {
-			report_memread(ch->block_pointer + i, IAPU.RAM[ch->block_pointer+i]);
+			report_memread(ch->block_pointer + i);
 		}
 	}
 	
@@ -656,7 +651,7 @@ void AltDecodeBlock2 (Channel *ch)
 	{
 		int i;
 		for (i=0; i<9; i++) {
-			report_memread(ch->block_pointer + i, IAPU.RAM[ch->block_pointer+i]);
+			report_memread(ch->block_pointer + i);
 		}
 	}
 
@@ -814,7 +809,7 @@ void DecodeBlock (Channel *ch)
 	{
 		int i;
 		for (i=0; i<9; i++) {
-			report_memread(ch->block_pointer + i, IAPU.RAM[ch->block_pointer+i]);
+			report_memread(ch->block_pointer + i);
 		}
 	}
 

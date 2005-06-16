@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.21 2005/06/16 16:21:10 raph Exp $ */
+/* $Id: main.c,v 1.22 2005/06/16 16:47:53 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -37,7 +37,7 @@
 
 #include "sdlfont.h"
 
-static int last_pc=-1;
+int last_pc=-1;
 
 #define PACKAGE "spcview"
 #define VERSION "0.01"
@@ -64,7 +64,7 @@ SPC_Config spc_config = {
 };
 
 //static unsigned char used[65536];
-static unsigned char used2[256];
+unsigned char used2[256];
 
 extern struct SAPU APU;
 extern struct SIAPU IAPU;
@@ -84,7 +84,7 @@ static char *g_real_filename=NULL; // holds the filename minus path
 
 SDL_Surface *screen=NULL;
 SDL_Surface *memsurface=NULL;
-static unsigned char *memsurface_data=NULL;
+unsigned char *memsurface_data=NULL;
 #define BUFFER_SIZE 65536
 static unsigned char audiobuf[BUFFER_SIZE];
 static int audio_buf_bytes=0, spc_buf_size;
@@ -98,10 +98,13 @@ void put4pixel(SDL_Surface *surface, int x, int y, Uint32 pixel);
 void report_memread(unsigned short address, unsigned char value);
 void report_memwrite(unsigned short address, unsigned char value);
 
+/*
 void report_memread3(unsigned short address, unsigned char value)
 {
 }
+*/
 
+/*
 void report_memread2(unsigned short address, unsigned char value)
 {
 	int i;
@@ -112,7 +115,7 @@ void report_memread2(unsigned short address, unsigned char value)
 
 	idx = (address&0xff00)<<4;
 	
-	/* do as if each instruction has 5 bytes */
+	// do as if each instruction has 5 bytes 
 	for (i=0; i<5; i++)
 	{
 		idx = (address&0xff00)<<4;
@@ -127,7 +130,8 @@ void report_memread2(unsigned short address, unsigned char value)
 		address++;
 	}
 }
-	
+*/
+/*	
 void report_memread(unsigned short address, unsigned char value)
 {
 	int idx = ((address&0xff00)<<4) + 2;
@@ -140,7 +144,8 @@ void report_memread(unsigned short address, unsigned char value)
 	//used[address&0xffff] = 1;
 	used2[(address&0xff00)>>8] = 1;
 }
-
+*/
+/*
 void report_memwrite(unsigned short address, unsigned char value)
 {
 	int idx = ((address&0xff00)<<4) + 1;
@@ -152,7 +157,7 @@ void report_memwrite(unsigned short address, unsigned char value)
 	memsurface_data[idx+2048]=0xff;
 	memsurface_data[idx+4+2048]=0xff;
 }
-
+*/
 void fade_arrays()
 {
 	int i;

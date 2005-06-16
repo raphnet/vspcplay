@@ -41,12 +41,14 @@
 
 #ifdef __cplusplus
 extern "C" {
-	void report_memread3(unsigned short address, unsigned char value);
-	void report_memread2(unsigned short address, unsigned char value);
-	void report_memread(unsigned short address, unsigned char value);
-	void report_memwrite(unsigned short address, unsigned char value);
+//	void report_memread3(unsigned short address, unsigned char value);
+//	void report_memread2(unsigned short address, unsigned char value);
+//	void report_memread(unsigned short address, unsigned char value);
+//	void report_memwrite(unsigned short address, unsigned char value);
 }
 #endif
+
+#include "report.h"
 
 START_EXTERN_C
 extern uint8 W4;
@@ -64,7 +66,7 @@ INLINE uint8 S9xAPUGetByteZ (uint8 Address)
 	    	IAPU.WaitAddress2 = IAPU.WaitAddress1;
 	    	IAPU.WaitAddress1 = IAPU.PC;
 #endif	   
-			report_memread(Address, IAPU.RAM[Address]);
+			report_memread(Address);
 	    	return (IAPU.RAM [Address]);
 		}
 		
@@ -76,31 +78,31 @@ INLINE uint8 S9xAPUGetByteZ (uint8 Address)
 #endif	    
 	    	uint8 t = IAPU.RAM [Address];
 	    	IAPU.RAM [Address] = 0;
-			report_memread(Address, t);
+			report_memread(Address);
 	    	return (t);
 		}
 		else
 		{
 			if (Address == 0xf3) 
 			{
-				report_memread(Address, S9xGetAPUDSP());
+				report_memread(Address);
 	    		return (S9xGetAPUDSP ());
 			}
 		}
 
-		report_memread(Address, IAPU.RAM[Address]);
+		report_memread(Address);
 		return (IAPU.RAM [Address]);
     }
     else 
 	{
-		report_memread(Address, IAPU.DirectPage[Address]);
+		report_memread(Address);
 		return (IAPU.DirectPage [Address]);
 	}
 }
 
 INLINE void S9xAPUSetByteZ (uint8 byte, uint8 Address)
 {
-	report_memwrite(Address, byte);
+	report_memwrite(Address);
     if (Address >= 0xf0 && IAPU.DirectPage == IAPU.RAM)
     {
 	if (Address == 0xf3)
@@ -140,12 +142,12 @@ INLINE uint8 S9xAPUGetByte (uint32 Address)
 	    IAPU.WaitAddress2 = IAPU.WaitAddress1;
 	    IAPU.WaitAddress1 = IAPU.PC;
 #endif	    
-		report_memread(Address, IAPU.RAM[Address]);
+		report_memread(Address);
 	    return (IAPU.RAM [Address]);
 	}
 	else
 	if (Address == 0xf3) {
-		report_memread(Address, S9xGetAPUDSP());
+		report_memread(Address);
 	    return (S9xGetAPUDSP ());
 	}
 	if (Address >= 0xfd)
@@ -156,14 +158,14 @@ INLINE uint8 S9xAPUGetByte (uint32 Address)
 #endif
 	    uint8 t = IAPU.RAM [Address];
 	    IAPU.RAM [Address] = 0;
-		report_memread(Address, t);
+		report_memread(Address);
 	    return (t);
 	}
-	report_memread(Address, IAPU.RAM[Address]);
+	report_memread(Address);
 	return (IAPU.RAM [Address]);
     }
     else {
-	report_memread(Address, IAPU.RAM[Address]);
+	report_memread(Address);
 	return (IAPU.RAM [Address]);
 	}
 }
@@ -172,7 +174,7 @@ INLINE void S9xAPUSetByte (uint8 byte, uint32 Address)
 {
     Address &= 0xffff;
     
-	report_memwrite(Address, byte);
+	report_memwrite(Address);
 	
     if (Address <= 0xff && Address >= 0xf0)
     {

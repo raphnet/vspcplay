@@ -93,7 +93,8 @@ struct SAPURegisters{
 };
 
 EXTERN_C struct SAPURegisters APURegisters;
-EXTERN_C void report_memread2(unsigned short address, unsigned char val);
+//EXTERN_C void report_memread2(unsigned short address, unsigned char val);
+#include "report.h"
 
 // Needed by ILLUSION OF GAIA
 #define ONE_APU_CYCLE 14
