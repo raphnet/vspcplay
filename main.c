@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.23 2005/06/17 16:54:44 raph Exp $ */
+/* $Id: main.c,v 1.24 2005/06/17 16:55:29 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -259,6 +259,7 @@ int parse_args(int argc, char **argv)
 				break;
 			case 9:
 				g_cfg_yield = 1;
+				break;
 			case 'h':
 				printf("Usage: ./vspcplay [options] files...\n");
 				printf("\n");
