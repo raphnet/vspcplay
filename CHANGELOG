@@ -1,6 +1,8 @@
 
 -- v1.1
-- Added --extra_time command line option
+  Added --extra_time command line option
+  Added --yield command line
+  Win32 support, compiled with mingw
 
 -- v1.0
-- Initial release. 
+  Initial release. 

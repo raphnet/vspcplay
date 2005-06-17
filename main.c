@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.22 2005/06/16 16:47:53 raph Exp $ */
+/* $Id: main.c,v 1.23 2005/06/17 16:54:44 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -69,6 +69,7 @@ unsigned char used2[256];
 extern struct SAPU APU;
 extern struct SIAPU IAPU;
 
+static int g_cfg_yield = 0;
 static int g_cfg_extratime = 0;
 static int g_cfg_ignoretagtime = 0;
 static int g_cfg_defaultsongtime = DEFAULT_SONGTIME;
@@ -218,6 +219,7 @@ int parse_args(int argc, char **argv)
 		{"default_time", 1, 0, 6},
 		{"ignore_tag_time", 0, 0, 7},
 		{"extra_time", 1, 0, 8},
+		{"yield", 0, 0, 9},
 		{"help", 0, 0, 'h'},
 		{0,0,0,0}
 	};
@@ -255,6 +257,8 @@ int parse_args(int argc, char **argv)
 			case 8:
 				g_cfg_extratime = atoi(optarg);
 				break;
+			case 9:
+				g_cfg_yield = 1;
 			case 'h':
 				printf("Usage: ./vspcplay [options] files...\n");
 				printf("\n");
@@ -275,6 +279,8 @@ int parse_args(int argc, char **argv)
 				printf("                     use default time\n");
 				printf(" --extra_time t      Set the number of extra seconds to play (relative to");
 				printf("                     the tag time or default time).\n");
+				printf(" --yield             Yield (give a chance to other process/threads to run\n");
+				printf("                     in main loop.\n");
 				
 				exit(0);
 				break;
@@ -658,6 +664,7 @@ reload:
 	{
 		SDL_Event ev;
 
+		
 		/* Check if it is time to change tune.
 		 */
 		if (audio_samples_written/44100 >= song_time) 
@@ -1037,9 +1044,11 @@ reload:
 			
 			SDL_UpdateRect(screen, 0, 0, 0, 0);
 			time_last = time_cur;
+			if (g_cfg_yield) {  SDL_Delay(0); }
 		} // if !g_cfg_novideo
 	}
 clean:
+	SDL_PauseAudio(1);
 	SDL_Quit();
     SPC_close();
 
