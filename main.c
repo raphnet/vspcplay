@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.26 2005/06/26 22:07:51 raph Exp $ */
+/* $Id: main.c,v 1.27 2005/06/26 22:10:57 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -52,7 +52,7 @@ int last_pc=-1;
 // 5 minutes default
 #define DEFAULT_SONGTIME	(60*5) 
 
-#define PROG_NAME_VERSION_STRING "vspcplay v1.1"
+#define PROG_NAME_VERSION_STRING "vspcplay v1.2"
 #define CREDITS "vspcplay v1.1 by Raphael Assenat (http://vspcplay.raphnet.net). APU emulation code from snes9x."
 
 SPC_Config spc_config = {
@@ -290,6 +290,7 @@ int parse_args(int argc, char **argv)
 				printf(" --extra_time t      Set the number of extra seconds to play (relative to");
 				printf("                     the tag time or default time).\n");
 				printf(" --nice              Try to use less cpu for graphics\n");
+				printf(" --status_line       Enable a text mode status line\n");
 				
 				exit(0);
 				break;

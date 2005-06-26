@@ -1,7 +1,10 @@
+-- v1.2
+  Added --status_line command line option (displays a status line in the
+  terminal).
 
 -- v1.1
   Added --extra_time command line option
-  Added --yield command line
+  Added --nice command line
   Win32 support, compiled with mingw
 
 -- v1.0
