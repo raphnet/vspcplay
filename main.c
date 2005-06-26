@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.25 2005/06/17 17:00:59 raph Exp $ */
+/* $Id: main.c,v 1.26 2005/06/26 22:07:51 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -69,6 +69,7 @@ unsigned char used2[256];
 extern struct SAPU APU;
 extern struct SIAPU IAPU;
 
+static int g_cfg_statusline = 0;
 static int g_cfg_nice = 0;
 static int g_cfg_extratime = 0;
 static int g_cfg_ignoretagtime = 0;
@@ -220,6 +221,8 @@ int parse_args(int argc, char **argv)
 		{"ignore_tag_time", 0, 0, 7},
 		{"extra_time", 1, 0, 8},
 		{"yield", 0, 0, 9},
+		{"auto_write_mask", 0, 0, 10},
+		{"status_line", 0, 0, 11},
 		{"help", 0, 0, 'h'},
 		{0,0,0,0}
 	};
@@ -259,6 +262,12 @@ int parse_args(int argc, char **argv)
 				break;
 			case 9:
 				g_cfg_nice = 1;
+				break;
+			case 10:
+				g_cfg_autowritemask = 1;
+				break;
+			case 11:
+				g_cfg_statusline = 1;
 				break;
 			case 'h':
 				printf("Usage: ./vspcplay [options] files...\n");
@@ -479,6 +488,18 @@ int init_sdl()
 	return 0;	
 }
 
+void pack_mask(unsigned char packed_mask[32])
+{
+	int i;
+	
+	memset(packed_mask, 0, 32);
+	for (i=0; i<256; i++)
+	{
+		if (used2[i])
+		packed_mask[i/8] |=	128 >> (i%8);
+	}
+}
+
 int main(int argc, char **argv)
 {
     void *buf=NULL;
@@ -664,9 +685,19 @@ reload:
 	{
 		SDL_Event ev;
 
+		pack_mask(packed_mask);
+		
+		if (g_cfg_statusline) {
+			printf("%s  %d / %d (%d %%)        \r", 
+					g_cfg_playlist[g_cur_entry],
+					audio_samples_written/44100,
+					song_time,
+					(audio_samples_written/44100)/(song_time));
+			fflush(stdout);
+		}
 		
 		/* Check if it is time to change tune.
-		 */
+		 */		
 		if (audio_samples_written/44100 >= song_time) 
 		{
 			if (g_cfg_autowritemask) {
@@ -815,6 +846,12 @@ reload:
 		if (g_cfg_nosound) {			
 			SPC_update(&audiobuf[audio_buf_bytes]);			
 			audio_samples_written += spc_buf_size/4; // 16bit stereo
+			SPC_update(&audiobuf[audio_buf_bytes]);			
+			audio_samples_written += spc_buf_size/4; // 16bit stereo
+			SPC_update(&audiobuf[audio_buf_bytes]);			
+			audio_samples_written += spc_buf_size/4; // 16bit stereo
+			SPC_update(&audiobuf[audio_buf_bytes]);			
+			audio_samples_written += spc_buf_size/4; // 16bit stereo
 		}
 		else
 		{	
@@ -879,12 +916,6 @@ reload:
 
 			if (1)
 			{
-				memset(packed_mask, 0, 32);
-				for (i=0; i<256; i++)
-				{
-					if (used2[i])
-					packed_mask[i/8] |=	128 >> (i%8);
-				}
 				sprintf(tmpbuf, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
 						packed_mask[0], packed_mask[1], packed_mask[2], packed_mask[3],
 						packed_mask[4], packed_mask[5], packed_mask[6], packed_mask[7],
