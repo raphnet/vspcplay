@@ -169,6 +169,10 @@ extern "C" void DecodeBlockAsm2 (int8 *, int16 *, int32 *, int32 *);
 STATIC inline uint8 *S9xGetSampleAddress (int sample_number)
 {
     uint32 addr = (((APU.DSP[APU_DIR] << 8) + (sample_number << 2)) & 0xffff);
+	report_memread(addr); // sample start address (Low)
+	report_memread(addr+1); // sample start address (High)
+	report_memread(addr+2); // sample loop address (Low)
+	report_memread(addr+3); // sample loop address (High)
     return (IAPU.RAM + addr);
 }
 
