@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.27 2005/06/26 22:10:57 raph Exp $ */
+/* $Id: main.c,v 1.28 2005/06/27 16:35:25 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -519,6 +519,8 @@ int main(int argc, char **argv)
 	
 	//memset(used, 0, 65536);
 
+	printf("%s\n", PROG_NAME_VERSION_STRING);
+	
 	parse_args(argc, argv);
 
 	if (g_cfg_num_files < 1) {

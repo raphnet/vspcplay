@@ -1,6 +1,8 @@
 -- v1.2
   Added --status_line command line option (displays a status line in the
   terminal).
+  Reads in the sample directory were not reported (Resulting in unusable
+  masks)
 
 -- v1.1
   Added --extra_time command line option
