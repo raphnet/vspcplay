@@ -106,7 +106,7 @@ INLINE void S9xAPUSetByteZ (uint8 byte, uint8 Address)
     if (Address >= 0xf0 && IAPU.DirectPage == IAPU.RAM)
     {
 	if (Address == 0xf3)
-	    S9xSetAPUDSP (byte);
+	    e9xSetAPUDSP (byte);
 	else
 	if (Address >= 0xf4 && Address <= 0xf7)
 	    APU.OutPorts [Address - 0xf4] = byte;
@@ -136,37 +136,40 @@ INLINE uint8 S9xAPUGetByte (uint32 Address)
     
     if (Address <= 0xff && Address >= 0xf0)
     {
-	if (Address >= 0xf4 && Address <= 0xf7)
-	{
+		if (Address >= 0xf4 && Address <= 0xf7)
+		{
 #ifdef SPC700_SHUTDOWN
-	    IAPU.WaitAddress2 = IAPU.WaitAddress1;
-	    IAPU.WaitAddress1 = IAPU.PC;
+		    IAPU.WaitAddress2 = IAPU.WaitAddress1;
+		    IAPU.WaitAddress1 = IAPU.PC;
 #endif	    
-		report_memread(Address);
-	    return (IAPU.RAM [Address]);
-	}
-	else
-	if (Address == 0xf3) {
-		report_memread(Address);
-	    return (S9xGetAPUDSP ());
-	}
-	if (Address >= 0xfd)
-	{
+			report_memread(Address);
+		    return (IAPU.RAM [Address]);
+		}
+		else
+		if (Address == 0xf3) {
+			report_memread(Address);
+		    return (S9xGetAPUDSP ());
+		}
+	
+		if (Address >= 0xfd)
+		{
 #ifdef SPC700_SHUTDOWN
-	    IAPU.WaitAddress2 = IAPU.WaitAddress1;
-	    IAPU.WaitAddress1 = IAPU.PC;
+		    IAPU.WaitAddress2 = IAPU.WaitAddress1;
+		    IAPU.WaitAddress1 = IAPU.PC;
 #endif
-	    uint8 t = IAPU.RAM [Address];
-	    IAPU.RAM [Address] = 0;
+		    uint8 t = IAPU.RAM [Address];
+		    IAPU.RAM [Address] = 0;
+			report_memread(Address);
+		    return (t);
+		}
+	
 		report_memread(Address);
-	    return (t);
-	}
-	report_memread(Address);
-	return (IAPU.RAM [Address]);
+		return (IAPU.RAM [Address]);
     }
-    else {
-	report_memread(Address);
-	return (IAPU.RAM [Address]);
+    else 
+	{
+		report_memread(Address);
+		return (IAPU.RAM [Address]);
 	}
 }
 
