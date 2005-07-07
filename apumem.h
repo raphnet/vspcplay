@@ -106,7 +106,7 @@ INLINE void S9xAPUSetByteZ (uint8 byte, uint8 Address)
     if (Address >= 0xf0 && IAPU.DirectPage == IAPU.RAM)
     {
 	if (Address == 0xf3)
-	    e9xSetAPUDSP (byte);
+	    S9xSetAPUDSP (byte);
 	else
 	if (Address >= 0xf4 && Address <= 0xf7)
 	    APU.OutPorts [Address - 0xf4] = byte;
