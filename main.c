@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.28 2005/06/27 16:35:25 raph Exp $ */
+/* $Id: main.c,v 1.29 2005/07/12 17:08:59 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -69,6 +69,8 @@ unsigned char used2[256];
 extern struct SAPU APU;
 extern struct SIAPU IAPU;
 
+static int g_cfg_apply_byte = 0;
+static int g_cfg_apply_block = 0;
 static int g_cfg_statusline = 0;
 static int g_cfg_nice = 0;
 static int g_cfg_extratime = 0;
@@ -100,66 +102,6 @@ void put4pixel(SDL_Surface *surface, int x, int y, Uint32 pixel);
 void report_memread(unsigned short address, unsigned char value);
 void report_memwrite(unsigned short address, unsigned char value);
 
-/*
-void report_memread3(unsigned short address, unsigned char value)
-{
-}
-*/
-
-/*
-void report_memread2(unsigned short address, unsigned char value)
-{
-	int i;
-	int idx;
-
-	if (address == last_pc) { return; }
-	last_pc = address;
-
-	idx = (address&0xff00)<<4;
-	
-	// do as if each instruction has 5 bytes 
-	for (i=0; i<5; i++)
-	{
-		idx = (address&0xff00)<<4;
-		idx += (address % 256)<<3;	
-		//used[address&0xffff] = 1;	
-		used2[(address&0xff00)>>8] = 1;
-	
-		memsurface_data[idx]=0xff;
-		memsurface_data[idx+2048]=0xff;
-		memsurface_data[idx+4]=0xff;
-		memsurface_data[idx+4+2048]=0xff;
-		address++;
-	}
-}
-*/
-/*	
-void report_memread(unsigned short address, unsigned char value)
-{
-	int idx = ((address&0xff00)<<4) + 2;
-	
-	idx += (address % 256)<<3;
-	memsurface_data[idx]=0xff;
-	memsurface_data[idx+2048]=0xff;
-	memsurface_data[idx+4]=0xff;
-	memsurface_data[idx+4+2048]=0xff;
-	//used[address&0xffff] = 1;
-	used2[(address&0xff00)>>8] = 1;
-}
-*/
-/*
-void report_memwrite(unsigned short address, unsigned char value)
-{
-	int idx = ((address&0xff00)<<4) + 1;
-
-	idx += (address % 256)<<3;
-	
-	memsurface_data[idx]=0xff;
-	memsurface_data[idx+4]=0xff;
-	memsurface_data[idx+2048]=0xff;
-	memsurface_data[idx+4+2048]=0xff;
-}
-*/
 void fade_arrays()
 {
 	int i;
@@ -170,6 +112,29 @@ void fade_arrays()
 }
 
 static int audio_samples_written=0;
+
+void applyBlockMask(char *filename)
+{
+	FILE *fptr;
+	unsigned char nul_arr[256];
+	int i;
+
+	memset(nul_arr, 0, 256);
+	
+	fptr = fopen(filename, "r+");
+	if (!fptr) { perror("fopen"); }
+	
+	for (i=0; i<256; i++)
+	{
+		fseek(fptr, 0x100+(i*256), SEEK_SET);
+		
+		if (!used2[i]) {
+			fwrite(nul_arr, 256, 1, fptr);
+		}
+	}
+	
+	fclose(fptr);
+}
 
 void my_audio_callback(void *userdata, Uint8 *stream, int len)
 {
@@ -224,6 +189,8 @@ int parse_args(int argc, char **argv)
 		{"auto_write_mask", 0, 0, 10},
 		{"status_line", 0, 0, 11},
 		{"help", 0, 0, 'h'},
+		{"apply_mask_block", 0, 0, 12},
+		{"apply_mask_byte", 0, 0, 13},
 		{0,0,0,0}
 	};
 
@@ -269,6 +236,12 @@ int parse_args(int argc, char **argv)
 			case 11:
 				g_cfg_statusline = 1;
 				break;
+			case 12:
+				g_cfg_apply_block = 1;
+				break;
+			case 13:
+				g_cfg_apply_byte = 1;
+				break;
 			case 'h':
 				printf("Usage: ./vspcplay [options] files...\n");
 				printf("\n");
@@ -287,11 +260,16 @@ int parse_args(int argc, char **argv)
 				printf("                     for when there is not id666 tag. (default: %d\n", DEFAULT_SONGTIME);
 				printf(" --ignore_tag_time   Ignore the time from the id666 tag and\n");
 				printf("                     use default time\n");
-				printf(" --extra_time t      Set the number of extra seconds to play (relative to");
+				printf(" --extra_time t      Set the number of extra seconds to play (relative to\n");
 				printf("                     the tag time or default time).\n");
 				printf(" --nice              Try to use less cpu for graphics\n");
 				printf(" --status_line       Enable a text mode status line\n");
-				
+				printf("\n!!! Careful with those!, they can ruin your sets so backup first!!!\n");
+				printf(" --apply_mask_block  Apply the mask to the file (replace unused blocks(256 bytes) with NULs)\n");
+				printf(" --apply_mask_byte   Apply the mask to the file (replace unused bytes with NULs)\n");
+				printf("\n");
+				printf("The mask will be applied when the tune ends due to playtime from tag\n");
+				printf("or default playtime.\n");
 				exit(0);
 				break;
 		}
