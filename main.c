@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.29 2005/07/12 17:08:59 raph Exp $ */
+/* $Id: main.c,v 1.30 2005/07/19 16:49:47 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -52,8 +52,8 @@ int last_pc=-1;
 // 5 minutes default
 #define DEFAULT_SONGTIME	(60*5) 
 
-#define PROG_NAME_VERSION_STRING "vspcplay v1.2"
-#define CREDITS "vspcplay v1.1 by Raphael Assenat (http://vspcplay.raphnet.net). APU emulation code from snes9x."
+#define PROG_NAME_VERSION_STRING "vspcplay v1.3"
+#define CREDITS "vspcplay v1.3 by Raphael Assenat (http://vspcplay.raphnet.net). APU emulation code from snes9x."
 
 SPC_Config spc_config = {
     44100,
@@ -69,6 +69,7 @@ unsigned char used2[256];
 extern struct SAPU APU;
 extern struct SIAPU IAPU;
 
+static unsigned char g_cfg_filler = 0x00;
 static int g_cfg_apply_byte = 0;
 static int g_cfg_apply_block = 0;
 static int g_cfg_statusline = 0;
@@ -119,19 +120,25 @@ void applyBlockMask(char *filename)
 	unsigned char nul_arr[256];
 	int i;
 
-	memset(nul_arr, 0, 256);
+	memset(nul_arr, g_cfg_filler, 256);
 	
 	fptr = fopen(filename, "r+");
 	if (!fptr) { perror("fopen"); }
-	
+
+	printf("[");
 	for (i=0; i<256; i++)
 	{
 		fseek(fptr, 0x100+(i*256), SEEK_SET);
 		
 		if (!used2[i]) {
+			printf(".");
 			fwrite(nul_arr, 256, 1, fptr);
+		} else {
+			printf("o");
 		}
+		fflush(stdout);
 	}
+	printf("]\n");
 	
 	fclose(fptr);
 }
@@ -191,6 +198,7 @@ int parse_args(int argc, char **argv)
 		{"help", 0, 0, 'h'},
 		{"apply_mask_block", 0, 0, 12},
 		{"apply_mask_byte", 0, 0, 13},
+		{"filler", 1, 0, 14},
 		{0,0,0,0}
 	};
 
@@ -242,6 +250,9 @@ int parse_args(int argc, char **argv)
 			case 13:
 				g_cfg_apply_byte = 1;
 				break;
+			case 14:
+				g_cfg_filler = strtol(optarg, NULL, 0);
+				break;
 			case 'h':
 				printf("Usage: ./vspcplay [options] files...\n");
 				printf("\n");
@@ -265,8 +276,9 @@ int parse_args(int argc, char **argv)
 				printf(" --nice              Try to use less cpu for graphics\n");
 				printf(" --status_line       Enable a text mode status line\n");
 				printf("\n!!! Careful with those!, they can ruin your sets so backup first!!!\n");
-				printf(" --apply_mask_block  Apply the mask to the file (replace unused blocks(256 bytes) with NULs)\n");
-				printf(" --apply_mask_byte   Apply the mask to the file (replace unused bytes with NULs)\n");
+				printf(" --apply_mask_block  Apply the mask to the file (replace unused blocks(256 bytes) with a pattern)\n");
+				printf(" --apply_mask_byte   Apply the mask to the file (replace unused bytes with a pattern)\n");
+				printf(" --filler val        Set the pattern byte value. Use with the 2 options above. Default 0\n");
 				printf("\n");
 				printf("The mask will be applied when the tune ends due to playtime from tag\n");
 				printf("or default playtime.\n");
@@ -683,6 +695,10 @@ reload:
 		{
 			if (g_cfg_autowritemask) {
 				write_mask(packed_mask);
+				if (g_cfg_apply_block) {
+					printf("Applying mask on file %s using $%02X as filler\n", g_cfg_playlist[g_cur_entry], g_cfg_filler);
+					applyBlockMask(g_cfg_playlist[g_cur_entry]);
+				}
 			}
 			if (!g_cfg_nosound) {
 				SDL_PauseAudio(1);

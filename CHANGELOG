@@ -1,3 +1,10 @@
+-- v1.3
+  Added command line options to replace the unused bytes in a spc file by a given pattern. By doing
+  this you can increase compressibility of files:
+    --apply_mask_block  Apply the mask to the file (replace unused blocks(256 bytes) with pattern)
+    --apply_mask_byte   Apply the mask to the file (replace unused bytes with pattern)
+	--filler val        Set the pattern byte value. Use with the 2 options above. Default 0 
+
 -- v1.2
   Added --status_line command line option (displays a status line in the
   terminal).
