@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.30 2005/07/19 16:49:47 raph Exp $ */
+/* $Id: main.c,v 1.31 2005/07/22 17:14:03 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -63,8 +63,11 @@ SPC_Config spc_config = {
     0 // echo
 };
 
-//static unsigned char used[65536];
-unsigned char used2[256];
+// those are bigger so I dont have to do a range test
+// each time I want to log the PC address (where I assume
+// a 5 byte instruction)
+unsigned char used[0x10006];
+unsigned char used2[0x101];
 
 extern struct SAPU APU;
 extern struct SIAPU IAPU;
@@ -607,7 +610,7 @@ reload:
 		if (g_cur_entry >= g_cfg_num_files) { g_cur_entry = 0; }
 	}
 	memset(memsurface_data, 0, 512*512*4);
-	//memset(used, 0, sizeof(used));
+	memset(used, 0, sizeof(used));
 	memset(used2, 0, sizeof(used2));
 	cur_mouse_address =0;
 	cur_time = 0;
