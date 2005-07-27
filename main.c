@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-/* $Id: main.c,v 1.31 2005/07/22 17:14:03 raph Exp $ */
+/* $Id: main.c,v 1.32 2005/07/27 17:27:47 raph Exp $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -73,7 +73,6 @@ extern struct SAPU APU;
 extern struct SIAPU IAPU;
 
 static unsigned char g_cfg_filler = 0x00;
-static int g_cfg_apply_byte = 0;
 static int g_cfg_apply_block = 0;
 static int g_cfg_statusline = 0;
 static int g_cfg_nice = 0;
@@ -250,9 +249,6 @@ int parse_args(int argc, char **argv)
 			case 12:
 				g_cfg_apply_block = 1;
 				break;
-			case 13:
-				g_cfg_apply_byte = 1;
-				break;
 			case 14:
 				g_cfg_filler = strtol(optarg, NULL, 0);
 				break;
@@ -280,8 +276,7 @@ int parse_args(int argc, char **argv)
 				printf(" --status_line       Enable a text mode status line\n");
 				printf("\n!!! Careful with those!, they can ruin your sets so backup first!!!\n");
 				printf(" --apply_mask_block  Apply the mask to the file (replace unused blocks(256 bytes) with a pattern)\n");
-				printf(" --apply_mask_byte   Apply the mask to the file (replace unused bytes with a pattern)\n");
-				printf(" --filler val        Set the pattern byte value. Use with the 2 options above. Default 0\n");
+				printf(" --filler val        Set the pattern byte value. Use with the option above. Default 0\n");
 				printf("\n");
 				printf("The mask will be applied when the tune ends due to playtime from tag\n");
 				printf("or default playtime.\n");
@@ -302,6 +297,7 @@ void write_mask(unsigned char packed_mask[32])
 	FILE *msk_file;
 	char *sep;
 	char filename[1024];
+	unsigned char tmp;
 	int i;
 	strncpy(filename, g_cfg_playlist[g_cur_entry], 1024);
 #ifdef WIN32
@@ -332,16 +328,34 @@ void write_mask(unsigned char packed_mask[32])
 	else
 	{
 		fwrite(packed_mask, 32, 1, msk_file);
-		fclose(msk_file);
 	}
 
 	printf("Writing mask to '%s'\n", filename);
 
+	// the first 32 bytes are for the 256BytesBlock mask
+	printf("256 Bytes-wide block mask:\n");
 	for (i=0; i<32; i++) {
 		printf("%02X",packed_mask[i]);
 	}
 	printf("\n");
-	
+
+	printf("Byte level mask..."); fflush(stdout);
+	memset(packed_mask, 0, 32);
+	for (i=0; i<65536; i+=8)
+	{
+		tmp = 0;
+		if (used[i]) tmp |= 128;
+		if (used[i+1]) tmp |= 64;
+		if (used[i+2]) tmp |= 32;
+		if (used[i+3]) tmp |= 16;
+		if (used[i+4]) tmp |= 8;
+		if (used[i+5]) tmp |= 4;
+		if (used[i+6]) tmp |= 2;
+		if (used[i+7]) tmp |= 1;
+		fwrite(&tmp, 1, 1, msk_file);
+	}
+	printf("Done.\n");
+	fclose(msk_file);
 }
 
 static char now_playing[1024];
