@@ -3,6 +3,8 @@
   this you can increase compressibility of files:
     --apply_mask_block  Apply the mask to the file (replace unused blocks(256 bytes) with pattern)
 	--filler val        Set the pattern byte value. Use with the option above. Default 0 
+	
+  Also bundled tools to apply mask files to spc files in the utils/ subdir.
 
 -- v1.2
   Added --status_line command line option (displays a status line in the
