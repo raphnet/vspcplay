@@ -516,7 +516,7 @@ int main(int argc, char **argv)
 	int cur_mouse_address=0x0000;
 	SDL_Rect tmprect;
 	SDL_Rect memrect;
-	char tmpbuf[30];
+	char tmpbuf[256];
 	id666_tag tag;
 	int song_time, cur_time; // in seconds
 	Uint32 current_ticks, song_started_ticks;
@@ -649,35 +649,35 @@ reload:
 		
 		sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y-10, "spc memory:", color_screen_white);
 
-		sprintf(tmpbuf, " QUIT - PAUSE - RESTART - PREV - NEXT - WRITE MASK");
+		snprintf(tmpbuf, sizeof(tmpbuf), " QUIT - PAUSE - RESTART - PREV - NEXT - WRITE MASK");
 		sdlfont_drawString(screen, 0, screen->h-9, tmpbuf, color_screen_yellow);
 
 		/* information */
 		sdlfont_drawString(screen, INFO_X, INFO_Y, "      - Info -", color_screen_white);
-		sprintf(tmpbuf, "Filename: %s", g_real_filename);
+		snprintf(tmpbuf, sizeof(tmpbuf), "Filename: %s", g_real_filename);
 		sdlfont_drawString(screen, INFO_X, INFO_Y+8, tmpbuf, color_screen_white);
-		sprintf(tmpbuf, "Title...: %s", tag.title);
+		snprintf(tmpbuf, sizeof(tmpbuf), "Title...: %s", tag.title);
 		sdlfont_drawString(screen, INFO_X, INFO_Y+16, tmpbuf, color_screen_white);
-		sprintf(tmpbuf, "Game....: %s", tag.game_title);
+		snprintf(tmpbuf, sizeof(tmpbuf), "Game....: %s", tag.game_title);
 		sdlfont_drawString(screen, INFO_X, INFO_Y+24, tmpbuf, color_screen_white);
-		sprintf(tmpbuf, "Dumper..: %s", tag.name_of_dumper);
+		snprintf(tmpbuf, sizeof(tmpbuf), "Dumper..: %s", tag.name_of_dumper);
 		sdlfont_drawString(screen, INFO_X, INFO_Y+32, tmpbuf, color_screen_white);
-		sprintf(tmpbuf, "Comment.: %s", tag.comments);
+		snprintf(tmpbuf, sizeof(tmpbuf), "Comment.: %s", tag.comments);
 		sdlfont_drawString(screen, INFO_X, INFO_Y+40, tmpbuf, color_screen_white);
 		
-		sprintf(tmpbuf, "Echo....: %s", spc_config.is_echo ? "On" : "Off");	
+		snprintf(tmpbuf, sizeof(tmpbuf), "Echo....: %s", spc_config.is_echo ? "On" : "Off");	
 		sdlfont_drawString(screen, INFO_X, INFO_Y+56, tmpbuf, color_screen_white);
 
-		sprintf(tmpbuf, "Interp. : %s", spc_config.is_interpolation ? "On" : "Off");	
+		snprintf(tmpbuf, sizeof(tmpbuf), "Interp. : %s", spc_config.is_interpolation ? "On" : "Off");	
 		sdlfont_drawString(screen, INFO_X, INFO_Y+64, tmpbuf, color_screen_white);
 	
-		sprintf(tmpbuf, "Autowrite mask.: %s", g_cfg_autowritemask ? "Yes" : "No");
+		snprintf(tmpbuf, sizeof(tmpbuf), "Autowrite mask.: %s", g_cfg_autowritemask ? "Yes" : "No");
 		sdlfont_drawString(screen, INFO_X, INFO_Y+72, tmpbuf, color_screen_white);
 
-		sprintf(tmpbuf, "Ignore tag time: %s", g_cfg_ignoretagtime ? "Yes" : "No");
+		snprintf(tmpbuf, sizeof(tmpbuf), "Ignore tag time: %s", g_cfg_ignoretagtime ? "Yes" : "No");
 		sdlfont_drawString(screen, INFO_X, INFO_Y+80, tmpbuf, color_screen_white);
 
-		sprintf(tmpbuf, "Default time...: %d", g_cfg_defaultsongtime);
+		snprintf(tmpbuf, sizeof(tmpbuf), "Default time...: %d", g_cfg_defaultsongtime);
 		sdlfont_drawString(screen, INFO_X, INFO_Y+88, tmpbuf, color_screen_white);
 
 		
@@ -925,12 +925,12 @@ reload:
 				}
 			}
 			
-			sprintf(tmpbuf, "Blocks used: %3d/256 (%.1f%%)  ", tmp, (float)tmp*100.0/256.0);
+			snprintf(tmpbuf, sizeof(tmpbuf), "Blocks used: %3d/256 (%.1f%%)  ", tmp, (float)tmp*100.0/256.0);
 			sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y + memsurface->h + 2, tmpbuf, color_screen_white);
 
 			if (1)
 			{
-				sprintf(tmpbuf, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+				snprintf(tmpbuf, sizeof(tmpbuf), "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
 						packed_mask[0], packed_mask[1], packed_mask[2], packed_mask[3],
 						packed_mask[4], packed_mask[5], packed_mask[6], packed_mask[7],
 						packed_mask[8], packed_mask[9], packed_mask[10], packed_mask[11],
@@ -947,12 +947,12 @@ reload:
 			// write the address under mouse cursor
 			if (cur_mouse_address >=0)
 			{
-				sprintf(tmpbuf, "Addr mouse: $%04X", cur_mouse_address);
+				snprintf(tmpbuf, sizeof(tmpbuf), "Addr mouse: $%04X", cur_mouse_address);
 				sdlfont_drawString(screen, MEMORY_VIEW_X+8*(23), MEMORY_VIEW_Y-10, tmpbuf, color_screen_white);
 			}
 
 			// write the program counter
-			sprintf(tmpbuf, "PC: $%04x  ", last_pc);
+			snprintf(tmpbuf, sizeof(tmpbuf), "PC: $%04x  ", last_pc);
 			sdlfont_drawString(screen, MEMORY_VIEW_X+8*12, MEMORY_VIEW_Y-10, tmpbuf, color_screen_white);
 
 			tmp = i+10; // y 
@@ -978,7 +978,7 @@ reload:
 					cur_color = color_screen_gray;
 				}
 				
-				sprintf(tmpbuf,"%d:",i);
+				snprintf(tmpbuf, sizeof(tmpbuf),"%d:",i);
 				sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp + (i*8), tmpbuf, color_screen_white);
 				
 				tmprect.y= tmp+(i*8)+2;
@@ -1008,7 +1008,7 @@ reload:
 				unsigned char right_vol = APU.DSP[1+(i*0x10)];
 				unsigned char gain = APU.DSP[7+(i*0x10)];
 
-				sprintf(tmpbuf,"%d:", i);
+				snprintf(tmpbuf, sizeof(tmpbuf),"%d:", i);
 				sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp + (i*10), tmpbuf, color_screen_white);
 				tmprect.x = MEMORY_VIEW_X+520+18;
 				tmprect.y = tmp+(i*10);
@@ -1044,7 +1044,7 @@ reload:
 				{
 					unsigned char *st = &IAPU.RAM[hexdump_address+i];
 					int p = MEMORY_VIEW_X+520, j;
-					sprintf(tmpbuf, "%04X: ", hexdump_address+i);
+					snprintf(tmpbuf, sizeof(tmpbuf), "%04X: ", hexdump_address+i);
 					sdlfont_drawString(screen, p, tmp, tmpbuf, color_screen_white);
 					p += 6*8;
 					for (j=0; j<8; j++) {
@@ -1058,7 +1058,7 @@ reload:
 								0x7f + (memsurface_data[idx+2]>>1)
 								);
 								
-						sprintf(tmpbuf, "%02X ", *st);
+						snprintf(tmpbuf, sizeof(tmpbuf), "%02X ", *st);
 						st++;
 						sdlfont_drawString(screen, p, tmp, tmpbuf, color);
 						p+= 2*8 + 4;
@@ -1072,14 +1072,14 @@ reload:
 			sdlfont_drawString(screen, PORTTOOL_X, PORTTOOL_Y+8, " APU:", color_screen_white);
 			sdlfont_drawString(screen, PORTTOOL_X, PORTTOOL_Y+16, "SNES:", color_screen_white);
 
-			sprintf(tmpbuf, " +%02X- +%02X- +%02X- +%02X-", IAPU.RAM[0xf4], IAPU.RAM[0xf5], IAPU.RAM[0xf6], IAPU.RAM[0xf7]);		
+			snprintf(tmpbuf, sizeof(tmpbuf), " +%02X- +%02X- +%02X- +%02X-", IAPU.RAM[0xf4], IAPU.RAM[0xf5], IAPU.RAM[0xf6], IAPU.RAM[0xf7]);		
 			sdlfont_drawString(screen, PORTTOOL_X + (8*5), PORTTOOL_Y+8, tmpbuf, color_screen_white);
 			
-			sprintf(tmpbuf, "  %02X   %02X   %02X   %02X", APU.OutPorts[0], APU.OutPorts[1], APU.OutPorts[2], APU.OutPorts[3]);		
+			snprintf(tmpbuf, sizeof(tmpbuf), "  %02X   %02X   %02X   %02X", APU.OutPorts[0], APU.OutPorts[1], APU.OutPorts[2], APU.OutPorts[3]);		
 			sdlfont_drawString(screen, PORTTOOL_X + (8*5), PORTTOOL_Y+16, tmpbuf, color_screen_white);
 
 			current_ticks = audio_samples_written/44100;
-			sprintf(tmpbuf, "Time....: %0d:%02d / %0d:%02d", 
+			snprintf(tmpbuf, sizeof(tmpbuf), "Time....: %0d:%02d / %0d:%02d", 
 					(current_ticks-song_started_ticks)/60,
 					((current_ticks-song_started_ticks))%60,
 					song_time/60, song_time%60);
