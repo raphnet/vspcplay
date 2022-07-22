@@ -53,8 +53,8 @@ int last_pc=-1;
 // 5 minutes default
 #define DEFAULT_SONGTIME	(60*5) 
 
-#define PROG_NAME_VERSION_STRING "vspcplay v1.3"
-#define CREDITS "vspcplay v1.3 by Raphael Assenat (http://vspcplay.raphnet.net). APU emulation code from snes9x."
+#define PROG_NAME_VERSION_STRING "vspcplay v"VERSION_STR
+#define CREDITS "vspcplay v" VERSION_STR " by Raphael Assenat (http://vspcplay.raphnet.net). APU emulation code from snes9x."
 
 SPC_Config spc_config = {
     44100,
