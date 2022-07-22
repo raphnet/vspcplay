@@ -61,6 +61,17 @@ Example:
 Note: When --nosound is used, the SPC is played as fast as possible. Otherwise playback
 is done at normal speed.
 
+
+### Generating a wave file for a specific channel
+
+Channels can be muted interactively (toggled using the 1-8 and 0 keys) or from the command-line (with --mute and --unmute).
+
+For instance, to generate a wave from channel 5:
+`./vspcplay music/ct-304.spc --nosound --novideo --mute all --unmute 5 --waveout corridor_ch5.wav`
+
+As shown above, multiple `--mute` and `--unmute` arguments can be used and are processed from left to right.
+
+
 ### Command-line option reference
 
 The supported option can be listed by passing `-help` in argument:
