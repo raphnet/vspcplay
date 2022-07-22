@@ -181,6 +181,37 @@ void my_audio_callback(void *userdata, Uint8 *stream, int len)
 	audio_samples_written += len/4; // 16bit stereo
 }
 
+static void printHelp(void)
+{
+	printf("Usage: ./vspcplay [options] files...\n");
+	printf("\n");
+	printf("Valid options:\n");
+	printf(" -h, --help     Print help\n");
+	printf(" --nosound      Dont output sound\n");
+	printf(" --novideo      Dont open video window\n");
+	printf(" --update_in_callback   Update spc sound buffer inside\n");
+	printf("                        sdl audio callback\n");
+	printf(" --interpolation  Use sound interpolatoin\n");
+	printf(" --echo           Enable echo\n");
+	printf(" --auto_write_mask   Write mask file automatically when a\n");
+	printf("                     tune ends due to playtime from tag or\n");
+	printf("                     default play time.\n");
+	printf(" --default_time t    Set the default play time in seconds\n");
+	printf("                     for when there is not id666 tag. (default: %d\n", DEFAULT_SONGTIME);
+	printf(" --ignore_tag_time   Ignore the time from the id666 tag and\n");
+	printf("                     use default time\n");
+	printf(" --extra_time t      Set the number of extra seconds to play (relative to\n");
+	printf("                     the tag time or default time).\n");
+	printf(" --nice              Try to use less cpu for graphics\n");
+	printf(" --status_line       Enable a text mode status line\n");
+	printf("\n!!! Careful with those!, they can ruin your sets so backup first!!!\n");
+	printf(" --apply_mask_block  Apply the mask to the file (replace unused blocks(256 bytes) with a pattern)\n");
+	printf(" --filler val        Set the pattern byte value. Use with the option above. Default 0\n");
+	printf("\n");
+	printf("The mask will be applied when the tune ends due to playtime from tag\n");
+	printf("or default playtime.\n");
+}
+
 int parse_args(int argc, char **argv)
 {
 	int res;
@@ -253,33 +284,7 @@ int parse_args(int argc, char **argv)
 				g_cfg_filler = strtol(optarg, NULL, 0);
 				break;
 			case 'h':
-				printf("Usage: ./vspcplay [options] files...\n");
-				printf("\n");
-				printf("Valid options:\n");
-				printf(" -h, --help     Print help\n");
-				printf(" --nosound      Dont output sound\n");
-				printf(" --novideo      Dont open video window\n");
-				printf(" --update_in_callback   Update spc sound buffer inside\n");
-				printf("                        sdl audio callback\n");
-				printf(" --interpolation  Use sound interpolatoin\n");
-				printf(" --echo           Enable echo\n");
-				printf(" --auto_write_mask   Write mask file automatically when a\n");
-				printf("                     tune ends due to playtime from tag or\n");
-				printf("                     default play time.\n");
-				printf(" --default_time t    Set the default play time in seconds\n");
-				printf("                     for when there is not id666 tag. (default: %d\n", DEFAULT_SONGTIME);
-				printf(" --ignore_tag_time   Ignore the time from the id666 tag and\n");
-				printf("                     use default time\n");
-				printf(" --extra_time t      Set the number of extra seconds to play (relative to\n");
-				printf("                     the tag time or default time).\n");
-				printf(" --nice              Try to use less cpu for graphics\n");
-				printf(" --status_line       Enable a text mode status line\n");
-				printf("\n!!! Careful with those!, they can ruin your sets so backup first!!!\n");
-				printf(" --apply_mask_block  Apply the mask to the file (replace unused blocks(256 bytes) with a pattern)\n");
-				printf(" --filler val        Set the pattern byte value. Use with the option above. Default 0\n");
-				printf("\n");
-				printf("The mask will be applied when the tune ends due to playtime from tag\n");
-				printf("or default playtime.\n");
+				printHelp();
 				exit(0);
 				break;
 		}
