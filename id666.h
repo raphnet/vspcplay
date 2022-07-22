@@ -27,7 +27,7 @@ typedef struct
 	char comments[33]; // 32 in file
 
 	//unsigned char date[12]; // 11 in file
-	unsigned char seconds_til_fadeout[4]; // 3 in file
+	char seconds_til_fadeout[4]; // 3 in file
 	//unsigned char length_of_fadeout[6]; // 5 in file, milliseconds
 	//unsigned char artist[33]; // 32 in file
 	//unsigned char chn_dis;
