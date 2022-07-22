@@ -1060,6 +1060,9 @@ reload:
 								
 						snprintf(tmpbuf, sizeof(tmpbuf), "%02X ", *st);
 						st++;
+						if (st >= 0x10000) {
+							st = IAPU.RAM;
+						}
 						sdlfont_drawString(screen, p, tmp, tmpbuf, color);
 						p+= 2*8 + 4;
 					}
