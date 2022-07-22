@@ -36,6 +36,7 @@
 #include "SDL.h"
 
 #include "sdlfont.h"
+#include "wavewriter.h"
 
 int last_pc=-1;
 
@@ -88,6 +89,8 @@ static char **g_cfg_playlist = NULL;
 static int g_paused = 0;
 static int g_cur_entry = 0;
 static char *g_real_filename=NULL; // holds the filename minus path
+static const char *g_outwavefile = NULL;
+static WaveWriter *g_waveWriter = NULL;
 
 SDL_Surface *screen=NULL;
 SDL_Surface *memsurface=NULL;
@@ -154,6 +157,10 @@ void my_audio_callback(void *userdata, Uint8 *stream, int len)
 		while (len>audio_buf_bytes)
 		{
 			SPC_update(&audiobuf[audio_buf_bytes]);
+			if (g_waveWriter) {
+				waveWriter_addSamples(g_waveWriter, &audiobuf[audio_buf_bytes], spc_buf_size/4);
+			}
+
 	//		printf("."); fflush(stdout);
 			audio_buf_bytes+=spc_buf_size;
 		}
@@ -186,24 +193,25 @@ static void printHelp(void)
 	printf("Usage: ./vspcplay [options] files...\n");
 	printf("\n");
 	printf("Valid options:\n");
-	printf(" -h, --help     Print help\n");
-	printf(" --nosound      Dont output sound\n");
-	printf(" --novideo      Dont open video window\n");
+	printf(" -h, --help             Print help\n");
+	printf(" --nosound              Do not output sound\n");
+	printf(" --novideo              Do not open video window\n");
+	printf(" --waveout file.wav     (Also) Create a wave file\n");
 	printf(" --update_in_callback   Update spc sound buffer inside\n");
 	printf("                        sdl audio callback\n");
-	printf(" --interpolation  Use sound interpolatoin\n");
-	printf(" --echo           Enable echo\n");
-	printf(" --auto_write_mask   Write mask file automatically when a\n");
-	printf("                     tune ends due to playtime from tag or\n");
-	printf("                     default play time.\n");
-	printf(" --default_time t    Set the default play time in seconds\n");
-	printf("                     for when there is not id666 tag. (default: %d\n", DEFAULT_SONGTIME);
-	printf(" --ignore_tag_time   Ignore the time from the id666 tag and\n");
-	printf("                     use default time\n");
-	printf(" --extra_time t      Set the number of extra seconds to play (relative to\n");
-	printf("                     the tag time or default time).\n");
-	printf(" --nice              Try to use less cpu for graphics\n");
-	printf(" --status_line       Enable a text mode status line\n");
+	printf(" --interpolation        Use sound interpolatoin\n");
+	printf(" --echo                 Enable echo\n");
+	printf(" --auto_write_mask      Write mask file automatically when a\n");
+	printf("                        tune ends due to playtime from tag or\n");
+	printf("                        default play time.\n");
+	printf(" --default_time t       Set the default play time in seconds\n");
+	printf("                        for when there is not id666 tag. (default: %d\n", DEFAULT_SONGTIME);
+	printf(" --ignore_tag_time      Ignore the time from the id666 tag and\n");
+	printf("                        use default time\n");
+	printf(" --extra_time t         Set the number of extra seconds to play (relative to\n");
+	printf("                        the tag time or default time).\n");
+	printf(" --nice                 Try to use less cpu for graphics\n");
+	printf(" --status_line          Enable a text mode status line\n");
 	printf("\n!!! Careful with those!, they can ruin your sets so backup first!!!\n");
 	printf(" --apply_mask_block  Apply the mask to the file (replace unused blocks(256 bytes) with a pattern)\n");
 	printf(" --filler val        Set the pattern byte value. Use with the option above. Default 0\n");
@@ -227,6 +235,7 @@ enum {
 	OPT_APPLY_MASK_BLOCK,
 	OPT_APPLY_MASK_BYTE,
 	OPT_FILLER,
+	OPT_WAVEOUT,
 };
 
 static struct option long_options[] = {
@@ -234,6 +243,7 @@ static struct option long_options[] = {
 
 	{ "nosound",            no_argument,       0, OPT_NOSOUND            },
 	{ "novideo",            no_argument,       0, OPT_NOVIDEO            },
+	{ "waveout",            required_argument, 0, OPT_WAVEOUT            },
 	{ "update_in_callback", no_argument,       0, OPT_UPDATE_IN_CALLBACK },
 	{ "echo",               no_argument,       0, OPT_ECHO               },
 	{ "interpolation",      no_argument,       0, OPT_INTERPOLATION      },
@@ -298,6 +308,9 @@ int parse_args(int argc, char **argv)
 				break;
 			case OPT_FILLER:
 				g_cfg_filler = strtol(optarg, NULL, 0);
+				break;
+			case OPT_WAVEOUT:
+				g_outwavefile = optarg;
 				break;
 			case 'h':
 				printHelp();
@@ -558,7 +571,14 @@ int main(int argc, char **argv)
 		printf("No files specified\n");
 		return 1;
 	}
-	
+
+	if (g_outwavefile) {
+		g_waveWriter = waveWriter_create(g_outwavefile);
+		if (!g_waveWriter) {
+			return -1;
+		}
+	}
+
     spc_buf_size = SPC_init(&spc_config);
 	printf("spc buffer size: %d\n", spc_buf_size);
 
@@ -879,15 +899,15 @@ reload:
 			
 		} // !g_cfg_novideo
 
-		if (g_cfg_nosound) {			
-			SPC_update(&audiobuf[audio_buf_bytes]);			
-			audio_samples_written += spc_buf_size/4; // 16bit stereo
-			SPC_update(&audiobuf[audio_buf_bytes]);			
-			audio_samples_written += spc_buf_size/4; // 16bit stereo
-			SPC_update(&audiobuf[audio_buf_bytes]);			
-			audio_samples_written += spc_buf_size/4; // 16bit stereo
-			SPC_update(&audiobuf[audio_buf_bytes]);			
-			audio_samples_written += spc_buf_size/4; // 16bit stereo
+		if (g_cfg_nosound) {
+			int i;
+			for (i=0; i<4; i++) {
+				SPC_update(&audiobuf[audio_buf_bytes]);
+				audio_samples_written += spc_buf_size/4; // 16bit stereo
+				if (g_waveWriter) {
+					waveWriter_addSamples(g_waveWriter, &audiobuf[audio_buf_bytes], spc_buf_size/4);
+				}
+			}
 		}
 		else
 		{	
@@ -905,6 +925,9 @@ reload:
 					while (BUFFER_SIZE - audio_buf_bytes >= spc_buf_size) {						
 						SDL_LockAudio();						
 						SPC_update(&audiobuf[audio_buf_bytes]);						
+						if (g_waveWriter) {
+							waveWriter_addSamples(g_waveWriter, &audiobuf[audio_buf_bytes], spc_buf_size/4);
+						}
 						SDL_UnlockAudio();
 						audio_buf_bytes += spc_buf_size;
 					}
@@ -1113,6 +1136,10 @@ clean:
 	SDL_PauseAudio(1);
 	SDL_Quit();
     SPC_close();
+	if (g_waveWriter) {
+		waveWriter_close(g_waveWriter);
+		waveWriter_free(g_waveWriter);
+	}
 
     return 0;
 }
