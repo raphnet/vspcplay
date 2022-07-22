@@ -1042,9 +1042,9 @@ reload:
 		
 				for (i=0; i<128; i+=8)
 				{
-					unsigned char *st = &IAPU.RAM[hexdump_address+i];
+					unsigned char *st = &IAPU.RAM[(hexdump_address+i) & 0xffff];
 					int p = MEMORY_VIEW_X+520, j;
-					snprintf(tmpbuf, sizeof(tmpbuf), "%04X: ", hexdump_address+i);
+					snprintf(tmpbuf, sizeof(tmpbuf), "%04X: ", (hexdump_address+i) & 0xffff);
 					sdlfont_drawString(screen, p, tmp, tmpbuf, color_screen_white);
 					p += 6*8;
 					for (j=0; j<8; j++) {
