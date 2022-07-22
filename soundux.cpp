@@ -1142,9 +1142,10 @@ void MixStereo (int sample_count)
 			}
 			else
 			{
-				for (;VL > 0; VL--)
+				for (;VL > 0; VL--) { // RA: 2022-07-22 added braces
 					if ((so.noise_gen <<= 1) & 0x80000000L)
 						so.noise_gen ^= 0x0040001L;
+				}
 					ch->sample = (so.noise_gen << 17) >> 17;
 					ch->interpolate = 0;
 			}
@@ -1432,9 +1433,10 @@ void MixMono (int sample_count)
 			}
 			else
 			{
-				for (;V > 0; V--)
+				for (;V > 0; V--) { // RA: 2022-07-22 added braces
 					if ((so.noise_gen <<= 1) & 0x80000000L)
 						so.noise_gen ^= 0x0040001L;
+				}
 					ch->sample = (so.noise_gen << 17) >> 17;
 					ch->interpolate = 0;
 			}
