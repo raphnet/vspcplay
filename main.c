@@ -1060,7 +1060,7 @@ reload:
 								
 						snprintf(tmpbuf, sizeof(tmpbuf), "%02X ", *st);
 						st++;
-						if (st >= 0x10000) {
+						if (st - IAPU.RAM == 0x10000) {
 							st = IAPU.RAM;
 						}
 						sdlfont_drawString(screen, p, tmp, tmpbuf, color);
