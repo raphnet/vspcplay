@@ -25,6 +25,14 @@ subdirectory music, you would use this command:
 
 `./vspcplay music/*.spc`
 
+Since version 1.4, the following keyboard controls are available:
+
+ - `N` `P` : Play next / previous song
+ - `R` : Restart current song
+ - `ESC` : Quit program
+ - `1` to `8` : Toggle mute on channel
+ - `0` : Toggle mute all / mute enone
+
 
 ## Use (command-line)
 

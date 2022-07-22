@@ -202,6 +202,8 @@ typedef struct
     int master_volume [2];
     int echo_volume [2];
     int noise_hertz;
+
+	int forceMute[NUM_CHANNELS];
 } SSoundData;
 
 EXTERN_C SSoundData SoundData;

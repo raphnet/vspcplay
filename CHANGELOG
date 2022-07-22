@@ -1,7 +1,8 @@
 -- v1.4 - 2022-07-22
-  Add an option to output a Wave file
-  Fix a bunch of buffer overflows
-  Fix warnings, some code cleanup...
+  - Add an option to output a Wave file
+  - Add options to mute/unmute specific channels (--mute and --unmute command-line options)
+  - Add keyboard controls (1-8 to toggle mute, 0 to toggle mute all/none, N/P to play next/previous song, R to restart song, ESC to quit)
+  - Fix a bunch of buffer overflows, fix warnings, some code cleanup...
 
 -- v1.3
   Added command line options to replace the unused bytes in a spc file by a given pattern. By doing

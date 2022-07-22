@@ -37,6 +37,7 @@
 
 #include "sdlfont.h"
 #include "wavewriter.h"
+#include "soundux.h"
 
 int last_pc=-1;
 
@@ -91,6 +92,7 @@ static int g_cur_entry = 0;
 static char *g_real_filename=NULL; // holds the filename minus path
 static const char *g_outwavefile = NULL;
 static WaveWriter *g_waveWriter = NULL;
+static unsigned char muted_at_startup[8];
 
 SDL_Surface *screen=NULL;
 SDL_Surface *memsurface=NULL;
@@ -212,12 +214,25 @@ static void printHelp(void)
 	printf("                        the tag time or default time).\n");
 	printf(" --nice                 Try to use less cpu for graphics\n");
 	printf(" --status_line          Enable a text mode status line\n");
-	printf("\n!!! Careful with those!, they can ruin your sets so backup first!!!\n");
-	printf(" --apply_mask_block  Apply the mask to the file (replace unused blocks(256 bytes) with a pattern)\n");
-	printf(" --filler val        Set the pattern byte value. Use with the option above. Default 0\n");
+	printf(" --mute channel         Start with channel muted (1-8 or all)\n");
+	printf(" --unmute channel       Unmute specified channel (1-8)\n");
+
+	printf("\nAdvanced options:\n");
+	printf("!!! Careful with those!, they can ruin your sets so backup first!!!\n");
+	printf(" --apply_mask_block     Apply the mask to the file (replace unused blocks(256 bytes) with a pattern)\n");
+	printf(" --filler val           Set the pattern byte value. Use with the option above. Default 0\n");
 	printf("\n");
 	printf("The mask will be applied when the tune ends due to playtime from tag\n");
 	printf("or default playtime.\n");
+	printf("\n");
+
+	printf("Keys: (graphical mode only)\n");
+	printf(" 1-8                   Toggle mute on channel 1-8\n");
+	printf(" 0                     Toggle all mute/unmute\n");
+	printf(" n                     Play next file\n");
+	printf(" p                     Play previous file\n");
+	printf(" r                     Restart current file\n");
+	printf(" ESC                   Quit\n");
 }
 
 enum {
@@ -236,6 +251,8 @@ enum {
 	OPT_APPLY_MASK_BYTE,
 	OPT_FILLER,
 	OPT_WAVEOUT,
+	OPT_MUTE,
+	OPT_UNMUTE,
 };
 
 static struct option long_options[] = {
@@ -256,6 +273,8 @@ static struct option long_options[] = {
 	{ "apply_mask_block",   no_argument,       0, OPT_APPLY_MASK_BLOCK   },
 	{ "apply_mask_byte",    no_argument,       0, OPT_APPLY_MASK_BYTE    },
 	{ "filler",             required_argument, 0, OPT_FILLER             },
+	{ "mute",               required_argument, 0, OPT_MUTE               },
+	{ "unmute",             required_argument, 0, OPT_UNMUTE             },
 
 	{0,0,0,0}
 };
@@ -263,13 +282,44 @@ static struct option long_options[] = {
 int parse_args(int argc, char **argv)
 {
 	int res;
-
+	int i;
 
 	while ((res=getopt_long(argc, argv, "h",
 				long_options, NULL))!=-1)
 	{
 		switch(res)
 		{
+			case OPT_UNMUTE:
+				if (0 == strcasecmp(optarg,"all")) {
+					for (i=0; i<8; i++) {
+						muted_at_startup[i] = 0;
+					}
+				}
+				else {
+					i = atoi(optarg);
+					if (i<1 || i>8) {
+						fprintf(stderr, "Invalid channel number. Valid arguments: 1-8 or all\n");
+						return -1;
+					}
+					muted_at_startup[i] = 0;
+				}
+				break;
+
+			case OPT_MUTE:
+				if (0 == strcasecmp(optarg,"all")) {
+					for (i=0; i<8; i++) {
+						muted_at_startup[i] = 1;
+					}
+				}
+				else {
+					i = atoi(optarg);
+					if (i<1 || i>8) {
+						fprintf(stderr, "Invalid channel number. Valid arguments: 1-8 or all\n");
+						return -1;
+					}
+					muted_at_startup[i] = 1;
+				}
+				break;
 			case OPT_NOSOUND:
 				g_cfg_nosound = 1;
 				break;
@@ -582,7 +632,13 @@ int main(int argc, char **argv)
     spc_buf_size = SPC_init(&spc_config);
 	printf("spc buffer size: %d\n", spc_buf_size);
 
-	
+	for (i=0; i<8; i++) {
+		if (muted_at_startup[i]) {
+			SoundData.forceMute[i] = 1;
+			printf("Channel %d muted from command-line\n", i+1);
+		}
+	}
+
 	init_sdl();
 	time_cur = time_last = SDL_GetTicks();
 
@@ -775,6 +831,47 @@ reload:
 			{
 				switch (ev.type)
 				{
+					case SDL_KEYDOWN:
+						{
+							SDLKey sym = ev.key.keysym.sym;
+
+							if (sym == SDLK_ESCAPE) {
+								if (!g_cfg_nosound) {
+									SDL_PauseAudio(1);
+								}
+								goto clean;
+							} else if (sym == SDLK_SPACE) {
+								g_paused = !g_paused;
+								SDL_PauseAudio(g_paused);
+							}
+							else if ((sym >= SDLK_1) && (sym <= SDLK_8)) {
+								SoundData.forceMute[sym-SDLK_1] = !SoundData.forceMute[sym-SDLK_1];
+							}
+							else if (sym == SDLK_0) { // mute/unmute all
+								int c, mute;
+								mute = !SoundData.forceMute[0];
+								for (c=0; c<8; c++) {
+									SoundData.forceMute[c] = mute;
+								}
+							}
+							else if (sym == SDLK_n) {
+								SDL_PauseAudio(1);
+								g_cur_entry++;
+								if (g_cur_entry>=g_cfg_num_files) { g_cur_entry = 0; }
+								goto reload;
+							}
+							else if (sym == SDLK_p) {
+								SDL_PauseAudio(1);
+								g_cur_entry--;
+								if (g_cur_entry<0) { g_cur_entry = g_cfg_num_files-1; }
+								goto reload;
+							}
+							else if (sym == SDLK_r) {
+								SDL_PauseAudio(1);
+								goto reload;
+							}
+						}
+						break;
 					case SDL_QUIT:
 						if (!g_cfg_nosound) {
 							SDL_PauseAudio(1);
@@ -1046,6 +1143,12 @@ reload:
 				unsigned char gain = APU.DSP[7+(i*0x10)];
 
 				snprintf(tmpbuf, sizeof(tmpbuf),"%d:", i);
+
+				if (SoundData.forceMute[i]) {
+					sdlfont_drawString(screen, MEMORY_VIEW_X+720, tmp + (i*10), "MUTED", color_screen_white);
+				} else {
+				}
+
 				sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp + (i*10), tmpbuf, color_screen_white);
 				tmprect.x = MEMORY_VIEW_X+520+18;
 				tmprect.y = tmp+(i*10);
@@ -1056,7 +1159,7 @@ reload:
 				tmprect.x = MEMORY_VIEW_X+520+18;
 				tmprect.w = right_vol*(screen->w-tmprect.x-20)/255;
 				tmprect.y = tmp+(i*10)+3;
-				
+
 				SDL_FillRect(screen, &tmprect, color_screen_cyan);
 
 				tmprect.x = MEMORY_VIEW_X+520+18;

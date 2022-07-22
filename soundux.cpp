@@ -897,6 +897,10 @@ void MixStereo (int sample_count)
 		int32 VL, VR;
 		Channel *ch = &SoundData.channels[J];
 		unsigned long freq0 = ch->frequency;
+
+		if (SoundData.forceMute[J]) {
+			continue;
+		}
 		
 		if (ch->state == SOUND_SILENT || !(so.sound_switch & (1 << J)))
 			continue;
