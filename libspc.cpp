@@ -344,16 +344,16 @@ SPC_ID666 *SPC_get_id666FP (FILE *fp)
 
   fseek(fp, 0x2E, SEEK_SET);
   fread(id->songname, 1, 32, fp);
-  id->songname[33] = '\0';
+  id->songname[32] = '\0';
 
   fread(id->gametitle, 1, 32, fp);
-  id->gametitle[33] = '\0';
+  id->gametitle[32] = '\0';
 
   fread(id->dumper, 1, 16, fp);
-  id->dumper[17] = '\0';
+  id->dumper[16] = '\0';
 
   fread(id->comments, 1, 32, fp);
-  id->comments[33] = '\0';
+  id->comments[32] = '\0';
 
   fseek(fp, 0xA9, SEEK_SET);
   fread(playtime_str, 1, 3, fp);
@@ -375,7 +375,7 @@ SPC_ID666 *SPC_get_id666FP (FILE *fp)
 
   fseek(fp, 0xB0, SEEK_SET);
   fread(id->author, 1, 32, fp);
-  id->author[33] = '\0';
+  id->author[32] = '\0';
 
   return id;
 }  
