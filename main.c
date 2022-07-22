@@ -510,15 +510,13 @@ void pack_mask(unsigned char packed_mask[32])
 
 int main(int argc, char **argv)
 {
-    void *buf=NULL;
 	int tmp, i;
-	int updates;
 	int cur_mouse_address=0x0000;
 	SDL_Rect tmprect;
 	SDL_Rect memrect;
 	char tmpbuf[256];
 	id666_tag tag;
-	int song_time, cur_time; // in seconds
+	int song_time; // in seconds
 	Uint32 current_ticks, song_started_ticks;
 	unsigned char packed_mask[32];
 	Uint32 time_last=0, time_cur=0;
@@ -537,7 +535,6 @@ int main(int argc, char **argv)
 	
     spc_buf_size = SPC_init(&spc_config);
 	printf("spc buffer size: %d\n", spc_buf_size);
-	buf = malloc(spc_buf_size*2);
 
 	
 	init_sdl();
@@ -627,7 +624,6 @@ reload:
 	memset(used, 0, sizeof(used));
 	memset(used2, 0, sizeof(used2));
 	cur_mouse_address =0;
-	cur_time = 0;
 	audio_samples_written = 0;
 	last_pc = -1;
 
@@ -872,8 +868,7 @@ reload:
 			if (!g_cfg_update_in_callback && !g_paused)
 			{
 				// fill the buffer when possible
-				updates = 0;
-			
+
 				while (BUFFER_SIZE - audio_buf_bytes >= spc_buf_size )
 				{
 					if (!g_cfg_novideo) {
@@ -970,13 +965,6 @@ reload:
 			for (i=0; i<8; i++)
 			{
 				unsigned short pitch = APU.DSP[2+(i*0x10)] | (APU.DSP[3+(i*0x10)]<<8);
-				Uint32 cur_color;
-			
-				if (APU.DSP[0x5c]&(1<<i)) {
-					cur_color = color_screen_white;
-				} else {
-					cur_color = color_screen_gray;
-				}
 				
 				snprintf(tmpbuf, sizeof(tmpbuf),"%d:",i);
 				sdlfont_drawString(screen, MEMORY_VIEW_X+520, tmp + (i*8), tmpbuf, color_screen_white);
