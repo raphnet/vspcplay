@@ -54,9 +54,8 @@ saved to the specified wave file.
 Note that if you play several .spc files, only one .wav file will be created.
 
 Example:
-`
-./vspcplay music/ct-304.spc --nosound --novideo --waveout corridor-of-time.wav --status
-`
+
+`./vspcplay music/ct-304.spc --nosound --novideo --waveout corridor-of-time.wav --status`
 
 Note: When --nosound is used, the SPC is played as fast as possible. Otherwise playback
 is done at normal speed.
@@ -67,6 +66,7 @@ is done at normal speed.
 Channels can be muted interactively (toggled using the 1-8 and 0 keys) or from the command-line (with --mute and --unmute).
 
 For instance, to generate a wave from channel 5:
+
 `./vspcplay music/ct-304.spc --nosound --novideo --mute all --unmute 5 --waveout corridor_ch5.wav`
 
 As shown above, multiple `--mute` and `--unmute` arguments can be used and are processed from left to right.
