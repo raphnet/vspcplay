@@ -209,7 +209,7 @@ static void RestoreSPC()
     uint8 mask = 1;
     int type;
     for (i = 0; i < 8; i++, mask <<= 1) {
-        Channel *ch = &SoundData.channels[i];
+        //Channel *ch = &SoundData.channels[i];
       
         S9xFixEnvelope (i,
                         APU.DSP[APU_GAIN + (i << 4)],
@@ -248,13 +248,14 @@ static void RestoreSPC()
 int SPC_load (const char *fname)
 {
     FILE *fp;
-    char temp[64];
+    //char temp[64];
 
     S9xInitAPU();
 
     fp = fopen (fname, "rb");
-    if (!fp)
+    if (!fp) {
         return FALSE;
+	}
  
 	if (!SPC_loadFP(fp)) { 
     	fclose(fp);
@@ -327,7 +328,7 @@ SPC_ID666 *SPC_get_id666FP (FILE *fp)
 {
   SPC_ID666 *id;
   unsigned char playtime_str[4] = { 0, 0, 0, 0 };
-  unsigned char fadetime_str[5] = { 0, 0, 0, 0, 0 };
+//  unsigned char fadetime_str[5] = { 0, 0, 0, 0, 0 };
  
   
   id = (SPC_ID666 *)malloc(sizeof(*id));

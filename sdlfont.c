@@ -2,9 +2,10 @@
 #include "SDL.h"
 #include "font.h"
 
-static void put4pixel(SDL_Surface *surface, int x, int y, Uint32 pixel);
+//static void put4pixel(SDL_Surface *surface, int x, int y, Uint32 pixel);
 static void putpixel(SDL_Surface *surface, int x, int y, Uint32 pixel);
 
+/*
 static void put4pixel(SDL_Surface *surface, int x, int y, Uint32 pixel)
 {
 	putpixel(surface, x, y, pixel);
@@ -12,6 +13,7 @@ static void put4pixel(SDL_Surface *surface, int x, int y, Uint32 pixel)
 	putpixel(surface, x, y + 1, pixel);
 	putpixel(surface, x + 1, y + 1, pixel);
 }
+*/
 
 static void putpixel(SDL_Surface *surface, int x, int y, Uint32 pixel)
 {
@@ -46,7 +48,7 @@ static void putpixel(SDL_Surface *surface, int x, int y, Uint32 pixel)
 static void _sdlfont_drawChar(SDL_Surface *dst, int X, int Y, const char ch, Uint32 color)
 {
 	int x, y;
-	char *c;
+	unsigned char *c;
 	
 	c = font_getChar(ch);
 	for (y=0; y<7; y++)
