@@ -299,7 +299,8 @@ void write_mask(unsigned char packed_mask[32])
 	char filename[1024];
 	unsigned char tmp;
 	int i;
-	strncpy(filename, g_cfg_playlist[g_cur_entry], 1024);
+
+	strncpy(filename, g_cfg_playlist[g_cur_entry], 1023);
 #ifdef WIN32
 	sep = strrchr(filename, '\\');
 #else
@@ -312,14 +313,18 @@ void write_mask(unsigned char packed_mask[32])
 	}
 
 	// add the filename
-	strncat(filename, g_real_filename, 1024);
+	strncat(filename, g_real_filename, 1023);
 
 	// but remove the extension if any
 	sep = strrchr(filename, '.');
 	if (sep) { *sep = 0; }
 
 	// and use the .msk extension
-	strncat(filename, ".msk", 1024);
+	strncat(filename, ".msk", 1023);
+
+	// make sure it is terminated (in case it is 1023 bytes long and strncat
+	// did not add a NULL
+	filename[1023] = 0;
 
 	msk_file = fopen(filename, "wb");
 	if (!msk_file) {
