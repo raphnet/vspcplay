@@ -212,28 +212,47 @@ static void printHelp(void)
 	printf("or default playtime.\n");
 }
 
+enum {
+	OPT_NOSOUND = 256,
+	OPT_NOVIDEO,
+	OPT_UPDATE_IN_CALLBACK,
+	OPT_INTERPOLATION,
+	OPT_ECHO,
+	OPT_DEFAULT_TIME,
+	OPT_IGNORE_TAG_TIME,
+	OPT_EXTRA_TIME,
+	OPT_YIELD,
+	OPT_AUTO_WRITE_MASK,
+	OPT_STATUS_LINE,
+	OPT_APPLY_MASK_BLOCK,
+	OPT_APPLY_MASK_BYTE,
+	OPT_FILLER,
+};
+
+static struct option long_options[] = {
+	{ "help",               no_argument,       0, 'h'},
+
+	{ "nosound",            no_argument,       0, OPT_NOSOUND            },
+	{ "novideo",            no_argument,       0, OPT_NOVIDEO            },
+	{ "update_in_callback", no_argument,       0, OPT_UPDATE_IN_CALLBACK },
+	{ "echo",               no_argument,       0, OPT_ECHO               },
+	{ "interpolation",      no_argument,       0, OPT_INTERPOLATION      },
+	{ "default_time",       required_argument, 0, OPT_DEFAULT_TIME       },
+	{ "ignore_tag_time",    no_argument,       0, OPT_IGNORE_TAG_TIME    },
+	{ "extra_time",         required_argument, 0, OPT_EXTRA_TIME         },
+	{ "yield",              no_argument,       0, OPT_YIELD              },
+	{ "auto_write_mask",    no_argument,       0, OPT_AUTO_WRITE_MASK    },
+	{ "status_line",        no_argument,       0, OPT_STATUS_LINE        },
+	{ "apply_mask_block",   no_argument,       0, OPT_APPLY_MASK_BLOCK   },
+	{ "apply_mask_byte",    no_argument,       0, OPT_APPLY_MASK_BYTE    },
+	{ "filler",             required_argument, 0, OPT_FILLER             },
+
+	{0,0,0,0}
+};
+
 int parse_args(int argc, char **argv)
 {
 	int res;
-	static struct option long_options[] = {
-		{"nosound", 0, 0, 0},
-		{"novideo", 0, 0, 1},
-		{"update_in_callback", 0, 0, 2},
-		{"echo", 0, 0, 3},
-		{"interpolation", 0, 0, 4},
-		{"savemask", 0, 0, 5},
-		{"default_time", 1, 0, 6},
-		{"ignore_tag_time", 0, 0, 7},
-		{"extra_time", 1, 0, 8},
-		{"yield", 0, 0, 9},
-		{"auto_write_mask", 0, 0, 10},
-		{"status_line", 0, 0, 11},
-		{"help", 0, 0, 'h'},
-		{"apply_mask_block", 0, 0, 12},
-		{"apply_mask_byte", 0, 0, 13},
-		{"filler", 1, 0, 14},
-		{0,0,0,0}
-	};
 
 
 	while ((res=getopt_long(argc, argv, "h",
@@ -241,46 +260,43 @@ int parse_args(int argc, char **argv)
 	{
 		switch(res)
 		{
-			case 0:
+			case OPT_NOSOUND:
 				g_cfg_nosound = 1;
 				break;
-			case 1:
+			case OPT_NOVIDEO:
 				g_cfg_novideo = 2;
 				break;
-			case 2:
+			case OPT_UPDATE_IN_CALLBACK:
 				g_cfg_update_in_callback = 1;
 				break;
-			case 4:
+			case OPT_INTERPOLATION:
 				spc_config.is_interpolation = 1;
 				break;
-			case 3:
+			case OPT_ECHO:
 				spc_config.is_echo = 1;
 				break;
-			case 5:
-				g_cfg_autowritemask = 1;
-				break;
-			case 6:
+			case OPT_DEFAULT_TIME:
 				g_cfg_defaultsongtime = atoi(optarg);
 				break;
-			case 7:
+			case OPT_IGNORE_TAG_TIME:
 				g_cfg_ignoretagtime = 1;
 				break;
-			case 8:
+			case OPT_EXTRA_TIME:
 				g_cfg_extratime = atoi(optarg);
 				break;
-			case 9:
+			case OPT_YIELD:
 				g_cfg_nice = 1;
 				break;
-			case 10:
+			case OPT_AUTO_WRITE_MASK:
 				g_cfg_autowritemask = 1;
 				break;
-			case 11:
+			case OPT_STATUS_LINE:
 				g_cfg_statusline = 1;
 				break;
-			case 12:
+			case OPT_APPLY_MASK_BLOCK:
 				g_cfg_apply_block = 1;
 				break;
-			case 14:
+			case OPT_FILLER:
 				g_cfg_filler = strtol(optarg, NULL, 0);
 				break;
 			case 'h':

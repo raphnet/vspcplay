@@ -1,9 +1,13 @@
+-- v1.4 - 2022-07-22
+  Fix a bunch of buffer overflows
+  Fix warnings, some code cleanup...
+
 -- v1.3
   Added command line options to replace the unused bytes in a spc file by a given pattern. By doing
   this you can increase compressibility of files:
     --apply_mask_block  Apply the mask to the file (replace unused blocks(256 bytes) with pattern)
 	--filler val        Set the pattern byte value. Use with the option above. Default 0 
-	
+
   Also bundled tools to apply mask files to spc files in the utils/ subdir.
 
 -- v1.2
