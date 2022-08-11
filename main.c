@@ -301,7 +301,7 @@ int parse_args(int argc, char **argv)
 						fprintf(stderr, "Invalid channel number. Valid arguments: 1-8 or all\n");
 						return -1;
 					}
-					muted_at_startup[i] = 0;
+					muted_at_startup[i-1] = 0;
 				}
 				break;
 
@@ -317,7 +317,7 @@ int parse_args(int argc, char **argv)
 						fprintf(stderr, "Invalid channel number. Valid arguments: 1-8 or all\n");
 						return -1;
 					}
-					muted_at_startup[i] = 1;
+					muted_at_startup[i-1] = 1;
 				}
 				break;
 			case OPT_NOSOUND:
