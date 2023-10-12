@@ -16,6 +16,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "id666.h"
 
@@ -36,7 +37,7 @@ int read_id666(FILE *fptr, id666_tag *tag)
 		strcpy(tag->seconds_til_fadeout, "150"); // 2.5 minutes
 		return 0;
 	}
-	
+
 	fseek(fptr, 0x2e, SEEK_SET);
 	tag->title[32] = 0;
 	fread(&tag->title, 32, 1, fptr);
@@ -50,13 +51,21 @@ int read_id666(FILE *fptr, id666_tag *tag)
 	fseek(fptr, 0xa9, SEEK_SET);
 	tag->seconds_til_fadeout[3] = 0;
 	fread(&tag->seconds_til_fadeout, 3, 1, fptr);
-	
-	
+
+
 	fseek(fptr, orig_pos, SEEK_SET);
 
 	return 1;
 }
 
 
+void print_id666(const id666_tag *tag)
+{
+	printf("Title: %s\n", tag->title);
+	printf("Game: %s\n", tag->game_title);
+	printf("Dumped by: %s\n", tag->name_of_dumper);
+	printf("Comments: %s\n", tag->comments);
+	printf("Duration (seconds): %d\n", atoi(tag->seconds_til_fadeout));
+}
 
 

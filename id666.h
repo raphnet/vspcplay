@@ -37,11 +37,13 @@ typedef struct
 
 /* returns true if a tag is found. tag is filled with tag
  * information.
- * 
+ *
  * returns false if a tag is not found. tag is filled
  * with empty strings and default values.
  */
 int read_id666(FILE *fptr, id666_tag *tag);
+
+void print_id666(const id666_tag *tag);
 
 #endif // _id666_h__
 
