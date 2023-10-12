@@ -29,6 +29,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <math.h>
+#include <errno.h>
 #include "libspc.h"
 #include "id666.h"
 
@@ -93,6 +94,7 @@ static char *g_real_filename=NULL; // holds the filename minus path
 static const char *g_outwavefile = NULL;
 static WaveWriter *g_waveWriter = NULL;
 static unsigned char muted_at_startup[8];
+static int just_show_info = 0;
 
 SDL_Surface *screen=NULL;
 SDL_Surface *memsurface=NULL;
@@ -216,6 +218,7 @@ static void printHelp(void)
 	printf(" --status_line          Enable a text mode status line\n");
 	printf(" --mute channel         Start with channel muted (1-8 or all)\n");
 	printf(" --unmute channel       Unmute specified channel (1-8)\n");
+	printf(" --id666                Display id666 tag info and exit.\n");
 
 	printf("\nAdvanced options:\n");
 	printf("!!! Careful with those!, they can ruin your sets so backup first!!!\n");
@@ -253,6 +256,7 @@ enum {
 	OPT_WAVEOUT,
 	OPT_MUTE,
 	OPT_UNMUTE,
+	OPT_FILEINFO,
 };
 
 static struct option long_options[] = {
@@ -275,6 +279,7 @@ static struct option long_options[] = {
 	{ "filler",             required_argument, 0, OPT_FILLER             },
 	{ "mute",               required_argument, 0, OPT_MUTE               },
 	{ "unmute",             required_argument, 0, OPT_UNMUTE             },
+	{ "id666",              no_argument,       0, OPT_FILEINFO           },
 
 	{0,0,0,0}
 };
@@ -365,6 +370,9 @@ int parse_args(int argc, char **argv)
 			case 'h':
 				printHelp();
 				exit(0);
+				break;
+			case OPT_FILEINFO:
+				just_show_info = 1;
 				break;
 		}
 	}
@@ -597,6 +605,34 @@ void pack_mask(unsigned char packed_mask[32])
 	}
 }
 
+void printInfo(void)
+{
+	int i;
+	FILE *fptr;
+	id666_tag id6;
+
+	printf("%d files\n", g_cfg_num_files);
+
+	for (i=0; i<g_cfg_num_files; i++) {
+		if (i>0) {
+			printf("------\n");
+		}
+
+		printf("File: %s\n", g_cfg_playlist[i]);
+
+		fptr = fopen(g_cfg_playlist[i], "rb");
+		if (!fptr) {
+			printf("Could not open file %s: %s\n", g_cfg_playlist[i], strerror(errno));
+			continue;
+		}
+
+		read_id666(fptr, &id6);
+		print_id666(&id6);
+
+		fclose(fptr);
+	}
+}
+
 int main(int argc, char **argv)
 {
 	int tmp, i;
@@ -620,6 +656,11 @@ int main(int argc, char **argv)
 	if (g_cfg_num_files < 1) {
 		printf("No files specified\n");
 		return 1;
+	}
+
+	if (just_show_info) {
+		printInfo();
+		return 0;
 	}
 
 	if (g_outwavefile) {
