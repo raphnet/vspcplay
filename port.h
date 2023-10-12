@@ -146,8 +146,7 @@ typedef void (*SignalHandler)(int);
 #define SIG_PF SignalHandler
 #endif
 
-#if defined(__i386__) || defined(__i486__) || defined(__i586__) || \
-    defined(__WIN32) || defined(__alpha__) || defined(__x86_64__) || defined(WIN32)
+#if defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(__x86_64__) || defined(__alpha__) || defined(__MIPSEL__) || defined(_M_IX86) || defined(_M_X64) || defined(_XBOX1) || defined(__arm__) || defined(ANDROID) || defined(__aarch64__) || (defined(__BYTE_ORDER__) && __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__)
 #define LSB_FIRST
 #define FAST_LSB_WORD_ACCESS
 #else
