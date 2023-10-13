@@ -79,7 +79,7 @@ The supported option can be listed by passing `-help` in argument:
 ```
 ./vspcplay --help
 
-vspcplay v1.4
+vspcplay v1.5
 Usage: ./vspcplay [options] files...
 
 Valid options:
@@ -102,6 +102,9 @@ Valid options:
                         the tag time or default time).
  --nice                 Try to use less cpu for graphics
  --status_line          Enable a text mode status line
+ --mute channel         Start with channel muted (1-8 or all)
+ --unmute channel       Unmute specified channel (1-8)
+ --id666                Display id666 tag info and exit.
 
 !!! Careful with those!, they can ruin your sets so backup first!!!
  --apply_mask_block  Apply the mask to the file (replace unused blocks(256 bytes) with a pattern)

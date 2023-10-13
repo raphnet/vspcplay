@@ -1,3 +1,8 @@
+-- v1.5 - TBD
+  - Fix non-playing initial notes in some files
+  - Add the --id666 command-line option to just display file info
+  - Try to fix arm and arm64 support (not tested)
+
 -- v1.4 - 2022-07-22
   - Add an option to output a Wave file
   - Add options to mute/unmute specific channels (--mute and --unmute command-line options)
