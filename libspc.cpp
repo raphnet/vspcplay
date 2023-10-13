@@ -218,7 +218,7 @@ static void RestoreSPC()
         S9xSetSoundVolume (i,
                            APU.DSP[APU_VOL_LEFT + (i << 4)],
                            APU.DSP[APU_VOL_RIGHT + (i << 4)]);
-        S9xSetSoundFrequency (i, ((APU.DSP[APU_P_LOW + (i << 4)]
+        S9xSetSoundHertz (i, ((APU.DSP[APU_P_LOW + (i << 4)]
                                    + (APU.DSP[APU_P_HIGH + (i << 4)] << 8))
                                   & FREQUENCY_MASK) * 8);
         if (APU.DSP [APU_NON] & mask)
