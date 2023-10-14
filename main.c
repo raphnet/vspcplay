@@ -735,11 +735,8 @@ reload:
 		song_time += g_cfg_extratime;
 
 		now_playing[0] = 0;
-		if (tag.title)
-		{
-			if (strlen(tag.title)) {
-				sprintf(now_playing, "Now playing: %s (%s), dumped by %s\n", tag.title, tag.game_title, tag.name_of_dumper);
-			}		
+		if (strlen(tag.title)) {
+			sprintf(now_playing, "Now playing: %s (%s), dumped by %s\n", tag.title, tag.game_title, tag.name_of_dumper);
 		}
 		if (strlen(now_playing)==0) {
 			sprintf(now_playing, "Now playing: %s\n", g_cfg_playlist[g_cur_entry]);
