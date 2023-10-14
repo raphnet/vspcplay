@@ -23,6 +23,8 @@
 #ifndef _LIBSPC_H_
 #define _LIBSPC_H_
 
+#include <stdio.h>
+
 typedef struct SPC_Config
 {
   int sampling_rate;

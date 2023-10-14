@@ -39,6 +39,8 @@
 #ifndef _SPC700_H_
 #define _SPC700_H_
 
+#include "port.h"
+
 #define Carry       1
 #define Zero        2
 #define Interrupt   4

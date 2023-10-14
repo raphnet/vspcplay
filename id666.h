@@ -18,6 +18,7 @@
 #ifndef _id666_h__
 #define _id666_h__
 
+#include <stdio.h>
 
 typedef struct
 {

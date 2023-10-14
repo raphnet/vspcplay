@@ -52,8 +52,6 @@ void S9xAPUSetByteZ (uint8, uint8 address);
 void S9xAPUSetByte (uint8, uint32 address);
 
 #else
-#undef INLINE
-#define INLINE inline
 #include "apumem.h"
 #endif
 
