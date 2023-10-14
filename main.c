@@ -965,32 +965,34 @@ reload:
 								x /= 8;
 								y = ev.button.y - PORTTOOL_Y;
 								y /= 8;
-								if (y==1) 
-//								printf("%d\n", x);
-								if (ev.button.button == SDL_BUTTON_LEFT)
+								if (y==1) //top row in porttool
 								{
-									switch (x)
+//									printf("%d\n", x);
+									if (ev.button.button == SDL_BUTTON_LEFT)
 									{
-										case 1: IAPU.RAM[0xf4]++; break;
-										case 4: IAPU.RAM[0xf4]--; break;
-										case 6: IAPU.RAM[0xf5]++; break;
-										case 9: IAPU.RAM[0xf5]--; break;
-										case 11: IAPU.RAM[0xf6]++; break;
-										case 14: IAPU.RAM[0xf6]--; break;
-										case 16: IAPU.RAM[0xf7]++; break;
-										case 19: IAPU.RAM[0xf7]--; break;
+										switch (x)
+										{
+											case 1: IAPU.RAM[0xf4]++; break;
+											case 4: IAPU.RAM[0xf4]--; break;
+											case 6: IAPU.RAM[0xf5]++; break;
+											case 9: IAPU.RAM[0xf5]--; break;
+											case 11: IAPU.RAM[0xf6]++; break;
+											case 14: IAPU.RAM[0xf6]--; break;
+											case 16: IAPU.RAM[0xf7]++; break;
+											case 19: IAPU.RAM[0xf7]--; break;
+										}
+									}
+									if (ev.button.button == SDL_BUTTON_WHEELUP ||
+										ev.button.button == SDL_BUTTON_WHEELDOWN)
+									{
+										if (ev.button.button == SDL_BUTTON_WHEELUP) { i=1; } else { i = -1; }
+										if (x>1 && x<4) { IAPU.RAM[0xf4] += i; }
+										if (x>6 && x<9) { IAPU.RAM[0xf5] += i; }
+										if (x>11 && x<14) { IAPU.RAM[0xf6] += i; }
+										if (x>16 && x<19) { IAPU.RAM[0xf7] += i; }
 									}
 								}
-								if (ev.button.button == SDL_BUTTON_WHEELUP ||
-									ev.button.button == SDL_BUTTON_WHEELDOWN)
-								{
-									if (ev.button.button == SDL_BUTTON_WHEELUP) { i=1; } else { i = -1; }
-									if (x>1 && x<4) { IAPU.RAM[0xf4] += i; }
-									if (x>6 && x<9) { IAPU.RAM[0xf5] += i; }
-									if (x>11 && x<14) { IAPU.RAM[0xf6] += i; }
-									if (x>16 && x<19) { IAPU.RAM[0xf7] += i; }
-								}
-							}	
+							}
 
 							/* menu bar */
 							if (
