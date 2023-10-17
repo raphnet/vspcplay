@@ -29,15 +29,16 @@ static void DoTimer (void)
 //   else
 //     APU.Cycles = 0;
 
+	// Update Timer 2 (64 kHz) every cycle
   if (APU.TimerEnabled [2]) {
-#if 0 // WinSPC
+#if 1 // WinSPC
       APU.Timer [2] ++;
 #else // snes9x
       APU.Timer [2] += 4;
 #endif
       if (APU.Timer [2] >= APU.TimerTarget [2]) {
 	  IAPU.RAM [0xff] = (IAPU.RAM [0xff] + 1) & 0xf;
-#if 0  // WinSPC
+#if 1  // WinSPC
  	  APU.Timer [2] = 0;
 #else  // snes9x
 	  APU.Timer [2] -= APU.TimerTarget [2];
@@ -49,6 +50,12 @@ static void DoTimer (void)
 
 	}
     }
+  
+	// Update Timers 0 and 1 (8 kHz) every 8 calls. (this is 8 times
+	// slower than timer 22, which updates on every call.
+	//
+	// TimerErrorCounter is incremented in SPC_update, before the DoTimer()
+	// call.
   if (IAPU.TimerErrorCounter >= 8)
     {
       IAPU.TimerErrorCounter = 0;
