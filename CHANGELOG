@@ -1,7 +1,10 @@
 -- v1.5 - TBD
   - Fix non-playing initial notes in some files
+  - Fix music playing too fast
   - Add the --id666 command-line option to just display file info
   - Try to fix arm and arm64 support (not tested)
+  - Fix clang warnings
+  - Fixed being able to scroll in porttool's bottom row
 
 -- v1.4 - 2022-07-22
   - Add an option to output a Wave file
