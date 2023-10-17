@@ -174,4 +174,7 @@ typedef void (*SignalHandler)(int);
 #define STATIC static
 #endif
 
+//TODO: check compatibility
+#define INLINE inline
+
 #endif

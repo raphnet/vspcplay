@@ -39,6 +39,9 @@
 #ifndef _apumemory_h_
 #define _apumemory_h_
 
+#include "apu.h"
+#include "port.h"
+
 #ifdef __cplusplus
 extern "C" {
 //	void report_memread3(unsigned short address, unsigned char value);
@@ -145,8 +148,7 @@ INLINE uint8 S9xAPUGetByte (uint32 Address)
 			report_memread(Address);
 		    return (IAPU.RAM [Address]);
 		}
-		else
-		if (Address == 0xf3) {
+		else if (Address == 0xf3) {
 			report_memread(Address);
 		    return (S9xGetAPUDSP ());
 		}
