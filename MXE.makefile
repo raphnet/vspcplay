@@ -5,7 +5,7 @@ SDLCONFIG=$(MXEBASE)/usr/i686-w64-mingw32.static/bin/sdl-config
 LD=$(CPP)
 
 #CFLAGS=-g -Wall -I../../src -fPIC
-CFLAGS=-O3 -funroll-loops -Wall -I../../src `$(SDLCONFIG) --cflags` -Wall
+CFLAGS=-O3 -funroll-loops -Wall -I../../src `$(SDLCONFIG) --cflags` -Wall -DVERSION_STR=\"1.5\"
 LDFLAGS=`$(SDLCONFIG) --libs` -lm
 
 PROG=vspcplay.exe
