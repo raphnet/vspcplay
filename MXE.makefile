@@ -1,6 +1,6 @@
 MXEBASE=/opt/mxe/mxe
-CC=i686-w64-mingw32.static-gcc
-CPP=i686-w64-mingw32.static-g++
+CC=$(MXEBASE)/usr/bin/i686-w64-mingw32.static-gcc
+CPP=$(MXEBASE)/usr/bin/i686-w64-mingw32.static-g++
 SDLCONFIG=$(MXEBASE)/usr/i686-w64-mingw32.static/bin/sdl-config
 LD=$(CPP)
 
