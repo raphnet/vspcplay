@@ -10,7 +10,7 @@ LDFLAGS=`$(SDLCONFIG) --libs` -lm
 
 PROG=vspcplay.exe
 
-OBJS = apu.o globals.o libspc.o soundux.o spc700.o main.o font.o sdlfont.o id666.o
+OBJS = apu.o globals.o libspc.o soundux.o spc700.o main.o font.o sdlfont.o id666.o wavewriter.o
 
 all: $(PROG)
 
