@@ -1,4 +1,29 @@
+# Figure out MXEBase, as a user can install MXE to /opt/mxe/mxe (manual install) or /usr/lib/mxe (APT install or manual install).
+
+ifdef MXEBASE
+
+# MXEBASE defined via CLI arguments.
+$(info Using MXE from custom directory '$(MXEBASE)'.)
+
+else ifneq (,$(wildcard /opt/mxe/mxe))
+
+# MXE in /opt/mxe/mxe.
 MXEBASE=/opt/mxe/mxe
+$(warning Using MXE from '/opt/mxe/mxe'.)
+
+else ifneq (,$(wildcard /usr/lib/mxe))
+
+# MXE in /usr/lib/mxe.
+MXEBASE=/usr/lib/mxe
+$(warning Using MXE from '/usr/lib/mxe'.)
+
+else
+
+# No installation found.
+$(error No MXE installation found. Please install MXE to '/opt/mxe/mxe' or '/usr/lib/mxe' or use "MXEBASE=<path>" in the command line arguments.)
+
+endif
+
 CC=$(MXEBASE)/usr/bin/i686-w64-mingw32.static-gcc
 CPP=$(MXEBASE)/usr/bin/i686-w64-mingw32.static-g++
 SDLCONFIG=$(MXEBASE)/usr/i686-w64-mingw32.static/bin/sdl-config
