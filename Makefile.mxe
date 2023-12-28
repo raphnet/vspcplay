@@ -34,9 +34,7 @@ CFLAGS=-O3 -funroll-loops -Wall -I../../src `$(SDLCONFIG) --cflags` -Wall -DVERS
 LDFLAGS=`$(SDLCONFIG) --libs` -lm
 
 PROG=vspcplay.exe
-VERSION_STR=1.5
-
-OBJS = apu.o globals.o libspc.o soundux.o spc700.o main.o font.o sdlfont.o id666.o wavewriter.o
+include ./shared.mk
 
 all: $(PROG)
 
