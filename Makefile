@@ -3,12 +3,11 @@ CPP=g++
 LD=$(CPP)
 
 #CFLAGS=-g -Wall -I../../src -fPIC 
-CFLAGS=-O3 -funroll-loops -Wall -I../../src `sdl-config --cflags` -Wall -DVERSION_STR=\"1.5\"
+CFLAGS=-O3 -funroll-loops -Wall -I../../src `sdl-config --cflags` -Wall -DVERSION_STR=\"$(VERSION_STR)\"
 LDFLAGS=`sdl-config --libs` -lm
 
 PROG=vspcplay
-
-OBJS = apu.o globals.o libspc.o soundux.o spc700.o main.o font.o sdlfont.o id666.o wavewriter.o
+include ./shared.mk
 
 all: $(PROG)
 
