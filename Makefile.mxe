@@ -9,13 +9,13 @@ else ifneq (,$(wildcard /opt/mxe/mxe))
 
 # MXE in /opt/mxe/mxe.
 MXEBASE=/opt/mxe/mxe
-$(warning Using MXE from '/opt/mxe/mxe'.)
+$(info Using MXE from '/opt/mxe/mxe'.)
 
 else ifneq (,$(wildcard /usr/lib/mxe))
 
 # MXE in /usr/lib/mxe.
 MXEBASE=/usr/lib/mxe
-$(warning Using MXE from '/usr/lib/mxe'.)
+$(info Using MXE from '/usr/lib/mxe'.)
 
 else
 
