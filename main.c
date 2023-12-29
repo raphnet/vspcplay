@@ -19,9 +19,9 @@
  */
 /* $Id: main.c,v 1.32 2005/07/27 17:27:47 raph Exp $ */
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
+//#ifdef HAVE_CONFIG_H
+//# include "config.h"
+//#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,7 +34,7 @@
 #include "id666.h"
 
 #include "spc_structs.h"
-#include "SDL.h"
+#include "sdl.h"
 
 #include "sdlfont.h"
 #include "wavewriter.h"
@@ -51,12 +51,6 @@ int last_pc=-1;
 #define PORTTOOL_Y		380
 #define INFO_X			540
 #define INFO_Y			420
-
-// 5 minutes default
-#define DEFAULT_SONGTIME	(60*5) 
-
-#define PROG_NAME_VERSION_STRING "vspcplay v"VERSION_STR
-#define CREDITS "vspcplay v" VERSION_STR " by Raphael Assenat (http://vspcplay.raphnet.net). APU emulation code from snes9x."
 
 SPC_Config spc_config = {
     44100,
@@ -75,37 +69,14 @@ unsigned char used2[0x101];
 extern struct SAPU APU;
 extern struct SIAPU IAPU;
 
-static unsigned char g_cfg_filler = 0x00;
-static int g_cfg_apply_block = 0;
-static int g_cfg_statusline = 0;
-static int g_cfg_nice = 0;
-static int g_cfg_extratime = 0;
-static int g_cfg_ignoretagtime = 0;
-static int g_cfg_defaultsongtime = DEFAULT_SONGTIME;
-static int g_cfg_autowritemask = 0;
-static int g_cfg_nosound = 0;
-static int g_cfg_novideo = 0;
-static int g_cfg_update_in_callback = 0;
-static int g_cfg_num_files = 0;
-static char **g_cfg_playlist = NULL;
-static int g_paused = 0;
-static int g_cur_entry = 0;
-static char *g_real_filename=NULL; // holds the filename minus path
-static const char *g_outwavefile = NULL;
-static WaveWriter *g_waveWriter = NULL;
-static unsigned char muted_at_startup[8];
-static int just_show_info = 0;
+#include "config.h"
+#include "id.h"
 
 SDL_Surface *screen=NULL;
 SDL_Surface *memsurface=NULL;
 unsigned char *memsurface_data=NULL;
-#define BUFFER_SIZE 65536
-static unsigned char audiobuf[BUFFER_SIZE];
-static int audio_buf_bytes=0, spc_buf_size;
 
-Uint32 color_screen_white, color_screen_black, color_screen_cyan, color_screen_magenta, color_screen_yellow, color_screen_red;
-Uint32 color_screen_gray;
-Uint32 colorscale[12];
+#include "shared.h"
 
 void putpixel(SDL_Surface *surface, int x, int y, Uint32 pixel);
 void put4pixel(SDL_Surface *surface, int x, int y, Uint32 pixel);
@@ -120,8 +91,6 @@ void fade_arrays()
 		if (memsurface_data[i] > 0x40) { memsurface_data[i]--; }
 	}
 }
-
-static int audio_samples_written=0;
 
 void applyBlockMask(char *filename)
 {
@@ -150,46 +119,6 @@ void applyBlockMask(char *filename)
 	printf("]\n");
 	
 	fclose(fptr);
-}
-
-void my_audio_callback(void *userdata, Uint8 *stream, int len)
-{
-//	printf("Callback %d  audio_buf_bytes: %d\n", len, audio_buf_bytes);
-	
-	if (g_cfg_update_in_callback)
-	{
-		while (len>audio_buf_bytes)
-		{
-			SPC_update(&audiobuf[audio_buf_bytes]);
-			if (g_waveWriter) {
-				waveWriter_addSamples(g_waveWriter, &audiobuf[audio_buf_bytes], spc_buf_size/4);
-			}
-
-	//		printf("."); fflush(stdout);
-			audio_buf_bytes+=spc_buf_size;
-		}
-		memcpy(stream, audiobuf, len);
-		memmove(audiobuf, &audiobuf[len], audio_buf_bytes - len);
-		audio_buf_bytes -= len;
-	//		printf("."); fflush(stdout);
-	}
-	else
-	{
-		//SDL_LockAudio();
-
-		if (audio_buf_bytes<len) {
-			printf("Underrun\n");
-			memset(stream, 0, len);
-		//	SDL_UnlockAudio();
-			return;
-		}
-
-		memcpy(stream, audiobuf, len);
-		memmove(audiobuf, &audiobuf[len], audio_buf_bytes - len);
-		audio_buf_bytes -= len;
-		
-	}
-	audio_samples_written += len/4; // 16bit stereo
 }
 
 static void printHelp(void)
@@ -527,70 +456,6 @@ void do_scroller(int elaps_milli)
 			p = screen->w;
 		}
 	}
-}
-
-int init_sdl()
-{
-	SDL_AudioSpec desired;
-	Uint32 flags=0;
-	
-	/* SDL initialisation */
-	if (!g_cfg_novideo) { flags |= SDL_INIT_VIDEO; }
-	if (!g_cfg_nosound) { flags |= SDL_INIT_AUDIO; }
-
-	SDL_Init(flags);	
-
-	if (!g_cfg_novideo) {
-		// video
-		screen = SDL_SetVideoMode(800, 600, 0, SDL_SWSURFACE);
-		if (screen == NULL) {
-			printf("Failed to set video mode\n");
-			return 0;
-		}
-
-		SDL_WM_SetCaption(PROG_NAME_VERSION_STRING, NULL);
-		
-		// precompute some colors
-		color_screen_black = SDL_MapRGB(screen->format, 0x00, 0x00, 0x00);
-		color_screen_white = SDL_MapRGB(screen->format, 0xff, 0xff, 0xff);
-		color_screen_yellow = SDL_MapRGB(screen->format, 0xff, 0xff, 0x00);
-		color_screen_cyan = SDL_MapRGB(screen->format, 0x00, 0xff, 0xff);
-		color_screen_magenta = SDL_MapRGB(screen->format, 0xff, 0x00, 0xff);
-		color_screen_gray = SDL_MapRGB(screen->format, 0x7f, 0x7f, 0x7f);
-		color_screen_red = SDL_MapRGB(screen->format, 0xff, 0x00, 0x00);
-
-		colorscale[0] = SDL_MapRGB(screen->format, 0xff, 0x00, 0x00);
-		colorscale[1] = SDL_MapRGB(screen->format, 0xff, 0x7f, 0x00);
-		colorscale[2] = SDL_MapRGB(screen->format, 0xff, 0xff, 0x00);
-		colorscale[3] = SDL_MapRGB(screen->format, 0x7f, 0xff, 0x00);
-		colorscale[4] = SDL_MapRGB(screen->format, 0x00, 0xff, 0x00);
-		colorscale[5] = SDL_MapRGB(screen->format, 0x00, 0xff, 0x7f);
-		colorscale[6] = SDL_MapRGB(screen->format, 0x00, 0xff, 0xff);
-		colorscale[7] = SDL_MapRGB(screen->format, 0x00, 0x7f, 0xff);
-		colorscale[8] = SDL_MapRGB(screen->format, 0x00, 0x00, 0xff);
-		colorscale[9] = SDL_MapRGB(screen->format, 0x7f, 0x00, 0xff);
-		colorscale[10] = SDL_MapRGB(screen->format, 0xff, 0x00, 0xff);
-		colorscale[11] = SDL_MapRGB(screen->format, 0xff, 0x00, 0x7f);
-	}
-	
-	if (!g_cfg_nosound) {
-		// audio
-		desired.freq = 44100;
-		desired.format = AUDIO_S16SYS;
-		desired.channels = 2;
-		desired.samples = 1024;
-		//desired.samples = 4096;
-		desired.callback = my_audio_callback;
-		desired.userdata = NULL;
-		if ( SDL_OpenAudio(&desired, NULL) < 0 ){
-			fprintf(stderr, "Couldn't open audio: %s\n", SDL_GetError());
-			return -1;
-		}
-
-		printf("sdl audio frag size: %d\n", desired.samples *4);
-	}
-	    
-	return 0;	
 }
 
 void pack_mask(unsigned char packed_mask[32])
@@ -1052,7 +917,7 @@ reload:
 			{
 				// fill the buffer when possible
 
-				while (BUFFER_SIZE - audio_buf_bytes >= spc_buf_size )
+				while (AUDIO_BUFFER_SIZE - audio_buf_bytes >= spc_buf_size )
 				{
 					if (!g_cfg_novideo) {
 						if (SDL_MUSTLOCK(memsurface)) {
@@ -1223,7 +1088,7 @@ reload:
 				for (i=0; i<128; i+=8)
 				{
 					unsigned char *st = &IAPU.RAM[(hexdump_address+i) & 0xffff];
-					int p = MEMORY_VIEW_X+520, j;
+					int p = MEMORY_VIEW_AX+520, j;
 					snprintf(tmpbuf, sizeof(tmpbuf), "%04X: ", (hexdump_address+i) & 0xffff);
 					sdlfont_drawString(screen, p, tmp, tmpbuf, color_screen_white);
 					p += 6*8;
