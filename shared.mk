@@ -1,3 +1,5 @@
 VERSION_STR := 1.5
 
-OBJS := $(subst .c,.o,$(subst .cpp,.o,$(wildcard *.c*)))
+OBJS := $(wildcard *.c*)
+OBJS := $(subst .cpp,.o,$(OBJS))
+OBJS := $(subst .c,.o,$(OBJS))
