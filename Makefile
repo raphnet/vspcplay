@@ -3,7 +3,7 @@ CPP=g++
 LD=$(CPP)
 
 #CFLAGS=-g -Wall -I../../src -fPIC 
-CFLAGS=-O3 -funroll-loops -Wall -I../../src `sdl-config --cflags` -Wall -DVERSION_STR=\"$(VERSION_STR)\"
+CFLAGS=-O3 -funroll-loops -Wall -I../../src `sdl2-config --cflags` -Wall -DVERSION_STR=\"$(VERSION_STR)\"
 LDFLAGS=`sdl-config --libs` -lm
 
 PROG=vspcplay
