@@ -1326,12 +1326,13 @@ reload:
 
 
 
+			SDL_UpdateTexture(texture, NULL, screen->pixels, screen->pitch);
 
-			int updateTextureStatus = SDL_UpdateTexture(texture, NULL, screen->pixels, screen->pitch);
-//			printf(SDL_GetError());
-			int renderClearStatus = SDL_RenderClear(renderer);
-			int renderCopyStatus = SDL_RenderCopy(renderer, texture, NULL, NULL);
+			SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xff);
+			SDL_RenderClear(renderer);
+			SDL_RenderCopy(renderer, texture, NULL, NULL);
 			SDL_RenderPresent(renderer);
+
 			time_last = time_cur;
 			if (g_cfg_nice) {  SDL_Delay(100); }
 		} // if !g_cfg_novideo
