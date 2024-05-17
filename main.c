@@ -97,9 +97,11 @@ static unsigned char muted_at_startup[8];
 static int just_show_info = 0;
 
 SDL_Surface *screen=NULL;
+#if (SDL_VERSION_ATLEAST(2,0,0))
 SDL_Texture *texture=NULL;
 SDL_Window *window=NULL;
 SDL_Renderer *renderer=NULL;
+#endif
 SDL_Surface *memsurface=NULL;
 unsigned char *memsurface_data=NULL;
 #define BUFFER_SIZE 65536
@@ -550,6 +552,7 @@ int init_sdl()
 
 	if (!g_cfg_novideo) {
 		// video
+#if (SDL_VERSION_ATLEAST(2,0,0))
 		window = SDL_CreateWindow(PROG_NAME_VERSION_STRING,
                   SDL_WINDOWPOS_UNDEFINED,
                   SDL_WINDOWPOS_UNDEFINED,
@@ -573,11 +576,11 @@ int init_sdl()
 			0x0000FF00,
 			0x000000FF,
 			0xFF000000);
-
 		if (screen == NULL) {
 			printf("%s\n", SDL_GetError());
 			exit(1);
 		}
+
 
 		texture = SDL_CreateTexture(renderer,
 			SDL_PIXELFORMAT_ARGB8888,
@@ -588,7 +591,16 @@ int init_sdl()
 			printf("%s\n", SDL_GetError());
 			exit(1);
 		}
-		
+#else
+		// SDL 1.x
+		screen = SDL_SetVideoMode(800, 600, 0, SDL_SWSURFACE);
+		if (screen == NULL) {
+			printf("%s\n", SDL_GetError());
+			exit(1);
+		}
+		SDL_WM_SetCaption(PROG_NAME_VERSION_STRING, NULL);
+#endif
+
 		// precompute some colors
 		color_screen_black = SDL_MapRGB(screen->format, 0x00, 0x00, 0x00);
 		color_screen_white = SDL_MapRGB(screen->format, 0xff, 0xff, 0xff);
@@ -911,7 +923,11 @@ reload:
 				{
 					case SDL_KEYDOWN:
 						{
+#if (SDL_VERSION_ATLEAST(2,0,0))
 							SDL_Keycode sym = ev.key.keysym.sym;
+#else
+							SDLKey sym = ev.key.keysym.sym;
+#endif
 
 							if (sym == SDLK_ESCAPE) {
 								if (!g_cfg_nosound) {
@@ -1020,6 +1036,19 @@ reload:
 										}
 									}
 								}
+
+								// SDL2 uses a decicated event type for the mouse wheel
+#if (SDL_MAJOR_VERSION == 1)
+								if (ev.button.button == SDL_BUTTON_WHEELUP ||
+									ev.button.button == SDL_BUTTON_WHEELDOWN)
+								{
+									if (ev.button.button == SDL_BUTTON_WHEELUP) { i=1; } else { i = -1; }
+									if (x>1 && x<4) { IAPU.RAM[0xf4] += i; }
+									if (x>6 && x<9) { IAPU.RAM[0xf5] += i; }
+									if (x>11 && x<14) { IAPU.RAM[0xf6] += i; }
+									if (x>16 && x<19) { IAPU.RAM[0xf7] += i; }
+								}
+#endif
 							}
 
 							/* menu bar */
@@ -1063,6 +1092,8 @@ reload:
 						}
 						break;
 
+#if (SDL_VERSION_ATLEAST(2,0,0))
+					// SDL 1 used button events for mousewheel
 					case SDL_MOUSEWHEEL:
 #if (SDL_VERSION_ATLEAST(2,26,0))
 							mouse_x = ev.wheel.mouseX - (PORTTOOL_X + (8*5));
@@ -1092,6 +1123,7 @@ reload:
 							}
 						}
 						break;
+#endif
 				}
 			} // while (pollevent)
 
@@ -1329,14 +1361,16 @@ reload:
 					song_time/60, song_time%60);
 			sdlfont_drawString(screen, INFO_X, INFO_Y+48, tmpbuf, color_screen_white);
 
-
-
+#if (SDL_VERSION_ATLEAST(2,0,0))
 			SDL_UpdateTexture(texture, NULL, screen->pixels, screen->pitch);
 
 			SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xff);
 			SDL_RenderClear(renderer);
 			SDL_RenderCopy(renderer, texture, NULL, NULL);
 			SDL_RenderPresent(renderer);
+#else
+			SDL_UpdateRect(screen, 0, 0, 0, 0);
+#endif
 
 			time_last = time_cur;
 			if (g_cfg_nice) {  SDL_Delay(100); }
