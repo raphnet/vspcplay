@@ -1068,9 +1068,15 @@ reload:
 									ev.button.y >= PORTTOOL_Y)
 						{
 							int x, y;
+
+#if (SDL_VERSION_ATLEAST(2,26,0))
 							x = ev.wheel.mouseX - (PORTTOOL_X + (8*5));
-							x /= 8;
 							y = ev.wheel.mouseY - PORTTOOL_Y;
+#else
+							SDL_GetMouseState(&x, &y);
+#endif
+							x -= (PORTTOOL_X + (8*5));
+							x /= 8;
 							y /= 8;
 							if (y==1) {
 								if (ev.wheel.y > 0) { i=1; } else { i = -1; }
@@ -1083,7 +1089,7 @@ reload:
 						break;
 				}
 			} // while (pollevent)
-			
+
 		} // !g_cfg_novideo
 
 		if (g_cfg_nosound) {
