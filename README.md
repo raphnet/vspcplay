@@ -117,7 +117,7 @@ or default playtime.
 
 ## Compilation
 
- * libsdl1.2
+ * libsdl2
  * gcc and g++
  * make
 
