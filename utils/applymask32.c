@@ -6,6 +6,7 @@
 static unsigned char g_cfg_filler = 0;
 static unsigned char used2[256];
 
+int load_mask(char *filename);
 void applyBlockMask(char *filename);
 
 int main(int argc, char **argv)
