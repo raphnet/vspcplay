@@ -163,7 +163,7 @@ void my_audio_callback(void *userdata, Uint8 *stream, int len)
 
 	SDL_memset(stream, 0, len); // As part of the migration to SDL2, the audio callback needs to set every byte in the buffer.
 	                            // I'm not sure if your audio callback is gaurenteed to do that,
-								// so I add this line here to initalize the buffer (ass specified in the migration guide).
+				    // so I add this line here to initalize the buffer (as specified in the migration guide).
 	                            // Better safe than sorry. If your audio callback does do this, feel free to comment out, or remove this line.
 	
 	if (g_cfg_update_in_callback)
