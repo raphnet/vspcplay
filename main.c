@@ -90,6 +90,7 @@ static int g_cfg_num_files = 0;
 static char **g_cfg_playlist = NULL;
 static int g_paused = 0;
 static int g_cur_entry = 0;
+static int g_loop = 0;
 static char *g_real_filename=NULL; // holds the filename minus path
 static const char *g_outwavefile = NULL;
 static WaveWriter *g_waveWriter = NULL;
@@ -245,6 +246,7 @@ static void printHelp(void)
 	printf(" n                     Play next file\n");
 	printf(" p                     Play previous file\n");
 	printf(" r                     Restart current file\n");
+	printf(" l                     Loop current file\n");
 	printf(" ESC                   Quit\n");
 }
 
@@ -837,7 +839,7 @@ reload:
 		
 		sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y-10, "spc memory:", color_screen_white);
 
-		snprintf(tmpbuf, sizeof(tmpbuf), " QUIT - PAUSE - RESTART - PREV - NEXT - WRITE MASK");
+		snprintf(tmpbuf, sizeof(tmpbuf), " QUIT - PAUSE - RESTART - PREV - NEXT - WRITE MASK - LOOP");
 		sdlfont_drawString(screen, 0, screen->h-9, tmpbuf, color_screen_yellow);
 
 		/* information */
@@ -908,7 +910,9 @@ reload:
 			if (!g_cfg_nosound) {
 				SDL_PauseAudio(1);
 			}
-			g_cur_entry++;
+			if (!g_loop) {
+				g_cur_entry++;
+			}
 			if (g_cur_entry>=g_cfg_num_files) { goto clean; }
 			goto reload;
 		}
@@ -963,6 +967,9 @@ reload:
 							else if (sym == SDLK_r) {
 								SDL_PauseAudio(1);
 								goto reload;
+							}
+							else if (sym == SDLK_l) {
+								g_loop = !g_loop;
 							}
 						}
 						break;
@@ -1087,6 +1094,10 @@ reload:
 
 								if (x>=41 && x<=50) { // write mask
 									write_mask(packed_mask);
+								}
+
+								if (x>=53 && x<=56) {  // loop
+									g_loop = !g_loop;
 								}
 							}
 						}
