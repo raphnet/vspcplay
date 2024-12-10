@@ -448,14 +448,9 @@ int S9xGetEnvelopeHeight (int channel)
     return (0);
 }
 
-#if 1
-void S9xSetSoundSample (int, uint16) 
-{
-}
-#else
 void S9xSetSoundSample (int channel, uint16 sample_number)
 {
-    register Channel *ch = &SoundData.channels[channel];
+    Channel *ch = &SoundData.channels[channel];
 	
     if (ch->state != SOUND_SILENT && 
 		sample_number != ch->sample_number)
@@ -473,7 +468,6 @@ void S9xSetSoundSample (int channel, uint16 sample_number)
 		ch->state = keep;
     }
 }
-#endif
 
 void S9xSetSoundFrequency (int channel, int hertz)
 {
