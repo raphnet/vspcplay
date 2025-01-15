@@ -90,6 +90,7 @@ static int g_cfg_num_files = 0;
 static char **g_cfg_playlist = NULL;
 static int g_paused = 0;
 static int g_cur_entry = 0;
+static int g_endless = 0;
 static char *g_real_filename=NULL; // holds the filename minus path
 static const char *g_outwavefile = NULL;
 static WaveWriter *g_waveWriter = NULL;
@@ -245,6 +246,7 @@ static void printHelp(void)
 	printf(" n                     Play next file\n");
 	printf(" p                     Play previous file\n");
 	printf(" r                     Restart current file\n");
+	printf(" e                     Endless playback\n");
 	printf(" ESC                   Quit\n");
 }
 
@@ -837,7 +839,7 @@ reload:
 		
 		sdlfont_drawString(screen, MEMORY_VIEW_X, MEMORY_VIEW_Y-10, "spc memory:", color_screen_white);
 
-		snprintf(tmpbuf, sizeof(tmpbuf), " QUIT - PAUSE - RESTART - PREV - NEXT - WRITE MASK");
+		snprintf(tmpbuf, sizeof(tmpbuf), " QUIT - PAUSE - RESTART - PREV - NEXT - WRITE MASK - ENDLESS");
 		sdlfont_drawString(screen, 0, screen->h-9, tmpbuf, color_screen_yellow);
 
 		/* information */
@@ -894,9 +896,9 @@ reload:
 			fflush(stdout);
 		}
 		
-		/* Check if it is time to change tune.
+		/* Check if it is time to change tune. On endless mode, it is never time to change the tune.
 		 */		
-		if (audio_samples_written/44100 >= song_time) 
+		if (audio_samples_written/44100 >= song_time && !g_endless)
 		{
 			if (g_cfg_autowritemask) {
 				write_mask(packed_mask);
@@ -963,6 +965,9 @@ reload:
 							else if (sym == SDLK_r) {
 								SDL_PauseAudio(1);
 								goto reload;
+							}
+							else if (sym == SDLK_e) {
+								g_endless = !g_endless;
 							}
 						}
 						break;
@@ -1087,6 +1092,10 @@ reload:
 
 								if (x>=41 && x<=50) { // write mask
 									write_mask(packed_mask);
+								}
+
+								if (x>=53 && x<=59) {  // endless
+									g_endless = !g_endless;
 								}
 							}
 						}
@@ -1360,6 +1369,10 @@ reload:
 					((current_ticks-song_started_ticks))%60,
 					song_time/60, song_time%60);
 			sdlfont_drawString(screen, INFO_X, INFO_Y+48, tmpbuf, color_screen_white);
+
+
+			snprintf(tmpbuf, sizeof(tmpbuf), "Endless : %s", g_endless ? "On " : "Off");
+			sdlfont_drawString(screen, INFO_X, INFO_Y+96, tmpbuf, color_screen_white);
 
 #if (SDL_VERSION_ATLEAST(2,0,0))
 			SDL_UpdateTexture(texture, NULL, screen->pixels, screen->pitch);
